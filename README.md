@@ -2,6 +2,8 @@
 
 **Mutual Fund Research & Comparison Studio**
 
+<https://fundlens-studio.vercel.app/>
+
 FundLens is an interactive research prototype for self-directed Indian mutual fund investors. It focuses on understanding return behaviour, not producing a black-box fund recommendation.
 
 ## Product areas
@@ -35,7 +37,7 @@ Open <http://localhost:3000>.
 This is a static HTML app. Import the repository into Vercel and use:
 - Framework preset: **Other**
 - Build command: blank
-- Output directory: `.`
+- Output directory: `. ` (set it to a single dot: `.`)
 - Install command: blank
 
 The connected GitHub repository deploys the root `index.html` on pushes to `main`.
