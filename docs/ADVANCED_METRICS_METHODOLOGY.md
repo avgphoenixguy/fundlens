@@ -6,7 +6,7 @@ Historical scheme NAV data is requested from MFapi.in, which republishes AMFI sc
 
 The Advanced view accepts a user-supplied CSV with a date column and a Total Returns Index value column. Fund and benchmark observations are joined on exact dates. No forward-fill, price-index substitution or synthetic benchmark observations are used. At least 30 matched daily returns are required before benchmark-relative metrics are displayed. A materially longer history is recommended for interpretation.
 
-NSE Indices provides historical index data and a separate Total Returns Index Values report. NSE explains that TRI includes constituent dividend receipts, whereas a price index does not. Mutual-fund performance should therefore be compared with the relevant TRI, not its price index.
+NSE Indices provides historical index data and a separate [Total Returns Index Values report](https://niftyindices.com/reports/historical-data). Its [TRI explainer](https://www.niftyindices.com/resources/index-concepts/total-return-index) explains that TRI includes constituent dividends. NSE explains that TRI includes constituent dividend receipts, whereas a price index does not. Mutual-fund performance should therefore be compared with the relevant TRI, not its price index.
 
 ## Calculations
 
@@ -18,7 +18,7 @@ Let r_p,t be the scheme's daily NAV return and r_b,t the benchmark's daily TRI r
 - Beta: sample covariance of scheme and benchmark daily returns divided by benchmark return variance.
 - Alpha: annualised daily CAPM intercept, 252 × [mean scheme return - risk-free rate - beta × (mean benchmark return - risk-free rate)].
 - Tracking error: sample standard deviation of daily active returns multiplied by square root of 252.
-- Information Ratio: mean daily active return divided by the sample standard deviation of daily active returns, multiplied by square root of 252.
+- Information Ratio (equity-oriented schemes only): mean daily arithmetic active return divided by the standard deviation of daily arithmetic excess returns, using the scheme's Tier 1 benchmark. The SEBI circular does not specify a square-root-of-252 multiplier in this formula, so FundLens does not annualise this daily IR estimate.
 - Benchmark CAGR and excess CAGR use the same matched first and last dates.
 
 The risk-free assumption is visible in the interface and editable. A zero value means a zero-return target, not a claim about the prevailing Indian risk-free rate. Set the risk-free proxy and observation period before interpreting Sharpe, Sortino or Alpha.
