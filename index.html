@@ -166,7 +166,7 @@ const seeds=[
  {code:143269,name:'Parag Parikh Liquid Fund - Direct Plan - Growth'},
  {code:154155,name:'Parag Parikh Large Cap Fund - Direct Plan - Growth'}
 ];
-const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false};
+const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0};
 const $=id=>document.getElementById(id);
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3200)}
 function fmtPct(v,d=2){return Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(d)+'%':'—'}
@@ -206,6 +206,27 @@ function histogramSvg(values,bins=12){
  let bars='';counts.forEach((c,i)=>{const bh=(c/top)*(h-p.t-p.b);bars+='<rect x="'+(p.l+i*bw+gap/2)+'" y="'+(h-p.b-bh)+'" width="'+(bw-gap)+'" height="'+bh+'" rx="3" fill="#36a77b"><title>'+c+' windows</title></rect>'});
  let labels='<text x="'+p.l+'" y="'+(h-9)+'" fill="#8a98a8" font-size="9">'+min.toFixed(1)+'%</text><text x="'+(w-p.r)+'" y="'+(h-9)+'" text-anchor="end" fill="#8a98a8" font-size="9">'+max.toFixed(1)+'%</text>';return '<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Return distribution histogram">'+bars+labels+'</svg>';
 }
+function comparisonReturnSvg(items,labels){
+ const periods=[{m:12,label:'1Y',color:'#16835d'},{m:36,label:'3Y',color:'#477fb8'},{m:60,label:'5Y',color:'#b78a3c'}];
+ const values=items.flatMap(x=>periods.map(p=>trailing(x.data,p.m)?.cagr).filter(Number.isFinite));
+ if(!values.length)return '<div class="empty">Not enough shared history for 1Y, 3Y or 5Y NAV-based CAGRs.</div>';
+ let min=Math.min(0,...values),max=Math.max(0,...values);if(min===max){min=-1;max=1}
+ const w=680,rowH=58,h=70+items.length*rowH,p={l:160,r:22,t:22,b:24},plotW=w-p.l-p.r;
+ const x=v=>p.l+(v-min)/(max-min)*plotW,zero=x(0);
+ let svg='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Grouped NAV CAGR comparison chart">';
+ for(let i=0;i<=4;i++){const v=min+(max-min)*i/4,xx=x(v);svg+='<line x1="'+xx+'" y1="'+p.t+'" x2="'+xx+'" y2="'+(h-p.b)+'" stroke="#edf1f5"/><text x="'+xx+'" y="'+(h-7)+'" text-anchor="middle" fill="#8c99a8" font-size="10">'+v.toFixed(1)+'%</text>'}
+ items.forEach((item,ix)=>{
+  const yy=p.t+ix*rowH+8;svg+='<text x="'+(p.l-12)+'" y="'+(yy+22)+'" text-anchor="end" fill="#46576b" font-size="11">'+escapeHtml((labels[ix]||('Scheme '+item.code)).slice(0,22))+'</text>';
+  periods.forEach((period,j)=>{
+   const ret=trailing(item.data,period.m)?.cagr;if(!Number.isFinite(ret))return;
+   const y0=yy+j*13,xx=x(ret),left=Math.min(zero,xx),width=Math.max(1,Math.abs(xx-zero));
+   svg+='<rect x="'+left+'" y="'+y0+'" width="'+width+'" height="9" rx="3" fill="'+period.color+'"><title>'+period.label+': '+fmtPct(ret)+'</title></rect>';
+  });
+ });
+ svg+='<line x1="'+zero+'" y1="'+p.t+'" x2="'+zero+'" y2="'+(h-p.b)+'" stroke="#95a2b2" stroke-width="1.2"/></svg>';
+ svg+='<div class="chart-legend">'+periods.map(p=>'<span><i class="dot" style="background:'+p.color+'"></i>'+p.label+'</span>').join('')+'</div>';
+ return svg;
+}
 function downChart(data){const ds=drawdownSeries(data);return chartSvg(ds.map(x=>({date:x.date,value:x.value})),{zeroFloor:true,suffix:'%',color:'#c45b67',label:'Drawdown chart'})}
 function renderRange(){const data=state.data;if(!data.length)return;const latest=data[data.length-1];let start=data[0].date;if(state.range!=='MAX'){const months=state.range==='1Y'?12:state.range==='3Y'?36:60;start=shiftMonths(latest.date,-months)}const filtered=data.filter(x=>x.date>=start);const base=filtered[0]?.nav||1;const series=filtered.map(x=>({date:x.date,value:10000*x.nav/base}));$('navChart').innerHTML=chartSvg(series,{money:true,label:'Growth of 10000'});
  $('chartRangeLabel').textContent=state.range+' view · '+filtered.length.toLocaleString('en-IN')+' NAV observations';
@@ -226,13 +247,19 @@ function updateOverview(){
  renderRolling();renderCompare();
 }
 async function loadScheme(code){
- if(!code)return;state.code=Number(code);$('apiState').textContent='FETCHING NAV';$('apiState').className='tag amber';$('navChart').innerHTML='<div class="skeleton"></div>';$('returnTable').innerHTML='<tr><td colspan="3">Loading NAV observations…</td></tr>';
+ if(!code)return;code=Number(code);state.code=code;const request=++state.loadRequest;$('apiState').textContent='FETCHING NAV';$('apiState').className='tag amber';$('navChart').innerHTML='<div class="skeleton"></div>';$('returnTable').innerHTML='<tr><td colspan="3">Loading NAV observations…</td></tr>';
  try{
-  const res=await fetch(API+'/'+encodeURIComponent(code),{headers:{'Accept':'application/json'}});if(!res.ok)throw new Error('NAV provider returned '+res.status);const body=await res.json();if(!body||!Array.isArray(body.data)||!body.data.length)throw new Error('No NAV history was returned for this scheme code.');
-  const parsed=body.data.map(x=>({date:parseDate(x.date),nav:Number(x.nav)})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.nav)&&x.nav>0).sort((a,b)=>a.date-b.date);
-  if(parsed.length<2)throw new Error('Not enough NAV observations to analyse this scheme.');
-  state.meta=body.meta||{};state.data=parsed;state.history=parsed;state.range=parsed.length>1500?'3Y':'MAX';$('apiState').textContent='NAV HISTORY LOADED';updateOverview();if(state.page==='rolling')renderRolling();if(state.page==='risk')renderRisk();toast('Loaded '+parsed.length.toLocaleString('en-IN')+' NAV observations.');
- }catch(e){$('apiState').textContent='DATA UNAVAILABLE';$('apiState').className='tag red';$('navChart').innerHTML='<div class="empty">'+e.message+'<br><a href="https://www.mfapi.in/docs/" target="_blank" rel="noopener">Check NAV API documentation ↗</a></div>';toast('Could not load this scheme. '+e.message)}
+  let cached=state.cache.get(code);
+  if(!cached){
+   const res=await fetch(API+'/'+encodeURIComponent(code),{headers:{'Accept':'application/json'}});if(!res.ok)throw new Error('NAV provider returned '+res.status);const body=await res.json();if(!body||!Array.isArray(body.data)||!body.data.length)throw new Error('No NAV history was returned for this scheme code.');
+   const parsed=body.data.map(x=>({date:parseDate(x.date),nav:Number(x.nav)})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.nav)&&x.nav>0).sort((a,b)=>a.date-b.date);
+   if(parsed.length<2)throw new Error('Not enough NAV observations to analyse this scheme.');
+   cached={meta:body.meta||{},data:parsed};state.cache.set(code,cached);
+  }
+  if(request!==state.loadRequest)return;
+  state.meta=cached.meta;state.data=cached.data;state.history=cached.data;state.range=state.data.length>1500?'3Y':'MAX';updateOverview();
+  if(state.page==='rolling')renderRolling();if(state.page==='risk')renderRisk();toast('Loaded '+state.data.length.toLocaleString('en-IN')+' NAV observations'+(state.cache.size>1?' · '+state.cache.size+' schemes cached':'')+'.');
+ }catch(e){if(request!==state.loadRequest)return;$('apiState').textContent='DATA UNAVAILABLE';$('apiState').className='tag red';$('navChart').innerHTML='<div class="empty">'+e.message+'<br><a href="https://www.mfapi.in/docs/" target="_blank" rel="noopener">Check NAV API documentation ↗</a></div>';toast('Could not load this scheme. '+e.message)}
 }
 function calcRolling(data,months,freq,type){
  const stride=freq==='daily'?1:freq==='weekly'?5:21;const out=[];if(!data||data.length<2)return out;
@@ -273,7 +300,7 @@ function addCompare(code){
  code=Number(code);if(state.compare.includes(code))return toast('This scheme is already in your comparison.');if(state.compare.length>=3)return toast('You can compare up to three schemes.');state.compare.push(code);renderCompare();toast('Scheme added to comparison.');
 }
 function removeCompare(code){state.compare=state.compare.filter(x=>x!==code);renderCompare()}
-async function ensureCompare(code){if(code===state.code)return {code,meta:state.meta,data:state.data};try{const r=await fetch(API+'/'+code);const b=await r.json();const d=(b.data||[]).map(x=>({date:parseDate(x.date),nav:Number(x.nav)})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.nav)&&x.nav>0).sort((a,b)=>a.date-b.date);return {code,meta:b.meta||{},data:d}}catch(e){return {code,meta:{scheme_name:'Scheme '+code},data:[]}}}
+async function ensureCompare(code){if(code===state.code)return {code,meta:state.meta,data:state.data};const cached=state.cache.get(Number(code));if(cached)return {code,meta:cached.meta,data:cached.data};try{const r=await fetch(API+'/'+code);if(!r.ok)throw new Error('NAV request failed');const b=await r.json();const d=(b.data||[]).map(x=>({date:parseDate(x.date),nav:Number(x.nav)})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.nav)&&x.nav>0).sort((a,b)=>a.date-b.date);const value={meta:b.meta||{},data:d};state.cache.set(Number(code),value);return {code,meta:value.meta,data:value.data}}catch(e){return {code,meta:{scheme_name:'Scheme '+code},data:[]}}}
 async function renderCompare(){
  $('compareCount').textContent=state.compare.length+' / 3 SELECTED';
  $('compareTray').innerHTML=state.compare.length?state.compare.map(c=>'<span class="compare-item">'+c+' <button class="remove" data-remove="'+c+'">×</button></span>').join(''):'<span class="muted">Add a fund from the universe or current selection.</span>';
@@ -283,7 +310,7 @@ async function renderCompare(){
  const metrics=[['Latest NAV',x=>x.data.length?money(x.data[x.data.length-1].nav):'N/A'],['1Y CAGR',x=>{const t=trailing(x.data,12);return t?fmtPct(t.cagr):'N/A'}],['3Y CAGR',x=>{const t=trailing(x.data,36);return t?fmtPct(t.cagr):'N/A'}],['5Y CAGR',x=>{const t=trailing(x.data,60);return t?fmtPct(t.cagr):'N/A'}],['Annualised volatility',x=>fmtPct(annualVol(x.data))],['Maximum drawdown',x=>fmtPct(maxDrawdown(x.data))],['NAV observations',x=>x.data.length.toLocaleString('en-IN')],['AMC',x=>x.meta.fund_house||'Not supplied'],['Category',x=>x.meta.scheme_category||'Not supplied']];
  $('compareHead').innerHTML='<tr><th>Measure</th>'+labels.map(n=>'<th>'+escapeHtml(n)+'</th>').join('')+'</tr>';
  $('compareBody').innerHTML=metrics.map(row=>'<tr><td class="fund-cell">'+row[0]+'</td>'+items.map(x=>'<td>'+row[1](x)+'</td>').join('')+'</tr>').join('');
- const bars=items.map((x,i)=>({name:labels[i],value:trailing(x.data,36)?.cagr})).filter(x=>Number.isFinite(x.value));$('compareChart').innerHTML=bars.length?'<div class="table-scroll"><table><tr><th>Scheme</th><th>3Y CAGR</th></tr>'+bars.map(x=>'<tr><td>'+escapeHtml(x.name)+'</td><td class="'+(x.value>=0?'up':'down')+'">'+fmtPct(x.value)+'</td></tr>').join('')+'</table></div>':'<div class="empty">Not enough shared history for a 3-year comparison.</div>';
+ $('compareChart').innerHTML=comparisonReturnSvg(items,labels);
  $('compareRisk').innerHTML=items.map(x=>{const v=annualVol(x.data),dd=maxDrawdown(x.data);return '<div style="margin:12px 0"><div class="result-name">'+escapeHtml(x.meta.scheme_name||('Scheme '+x.code))+'</div><div class="fund-meta">Volatility '+fmtPct(v)+' · Max drawdown '+fmtPct(dd)+'</div></div>'}).join('');
 }
 function renderRisk(){if(!state.data.length)return;const d=state.data,dr=drawdownSeries(d);$('riskDrawdown').innerHTML=chartSvg(dr.map(x=>({date:x.date,value:x.value})),{zeroFloor:true,suffix:'%',color:'#c45b67'});const ret=[];for(let i=1;i<d.length;i++)ret.push((d[i].nav/d[i-1].nav-1)*100);$('riskHistogram').innerHTML=histogramSvg(ret,16)}
