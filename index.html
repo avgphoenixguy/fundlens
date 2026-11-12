@@ -236,7 +236,7 @@ async function loadScheme(code){
 }
 function calcRolling(data,months,freq,type){
  const stride=freq==='daily'?1:freq==='weekly'?5:21;const out=[];if(!data||data.length<2)return out;
- for(let i=0;i<data.length;i+=stride){const target=shiftMonths(data[i].date,months);const j=lowerBound(data,target);if(j>=data.length)break;if(j<=i)continue;const ratio=data[j].nav/data[i].nav;const ret=(type==='absolute'?(ratio-1):(Math.pow(ratio,12/months)-1))*100;out.push({date:data[i].date,value:ret,end:data[j].date})}
+ for(let i=0;i<data.length;i+=stride){const target=shiftMonths(data[i].date,months);const j=lowerBound(data,target);if(j>=data.length)break;if(j<=i)continue;const ratio=data[j].nav/data[i].nav;const elapsedYears=(data[j].date-data[i].date)/(365.25*86400000);if(elapsedYears<=0)continue;const ret=(type==='absolute'?(ratio-1):(Math.pow(ratio,1/elapsedYears)-1))*100;out.push({date:data[i].date,value:ret,end:data[j].date})}
  return out;
 }
 function renderRolling(){
