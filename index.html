@@ -374,7 +374,8 @@ function setExperience(view){document.body.dataset.view=view;document.querySelec
 document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.addEventListener('click',()=>setExperience(b.dataset.view)));
 $('benchmarkName')?.addEventListener('change',e=>{state.benchmarkName=e.target.value;state.benchmarkSeries=[];$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='Benchmark changed. Import matched daily TRI for '+state.benchmarkName+'.';renderResearchMetrics()});
 $('benchmarkFile')?.addEventListener('change',e=>uploadTriFile(e.target.files[0]));
-$('rfRate')?.addEventListener('input',()=>{renderResearchMetrics();renderGuidedResearch()});
+$('rfRate')?.addEventListener('input',()=>{renderResearchMetrics();renderGuidedResearch();renderCompare()});
+$('analysisPeriod')?.addEventListener('change',()=>{renderResearchMetrics();renderRelativeRolling();renderCompare()});
 $('holdingsFile')?.addEventListener('change',e=>readHoldingsFile(e.target.files[0]));
 
 function drawdownSeries(data){let peak=-Infinity,max=0;return data.map(x=>{peak=Math.max(peak,x.nav);const dd=(x.nav/peak)-1;max=Math.min(max,dd);return {date:x.date,value:dd*100}}).map(x=>({...x,maxDrawdown:max*100}))}
