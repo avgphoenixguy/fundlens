@@ -16,7 +16,7 @@
 <div class="app-shell">
 <header class="topbar">
  <div class="brand"><div class="brand-mark">F</div><div>Fund<span>Lens</span><div class="top-sub">MUTUAL FUND RESEARCH STUDIO</div></div></div>
- <div class="top-right"><span class="live-pill">● NAV HISTORY CONNECTED</span><a href="https://github.com/avgphoenixguy/fundlens" target="_blank" rel="noopener">Project notes ↗</a></div>
+ <div class="top-right"><span class="live-pill">● NAV HISTORY API</span><a href="https://github.com/avgphoenixguy/fundlens" target="_blank" rel="noopener">Project notes ↗</a></div>
 </header>
 <div class="layout">
  <aside class="sidebar">
@@ -33,7 +33,7 @@
   <section class="panel active" id="page-overview">
    <div class="page-head"><div><div class="eyebrow">YOUR RESEARCH WORKSPACE</div><h1>Fund intelligence, without the noise.</h1><p>Explore the scheme universe, understand return behaviour and compare funds beyond trailing returns.</p></div><div class="head-actions"><button class="btn" id="openUniverse">Explore fund universe ↗</button><button class="btn primary" id="openRolling">Custom rolling analysis</button></div></div>
    <div class="card" style="margin-bottom:15px">
-    <div class="card-head"><div><div class="card-title">Selected scheme</div><div class="card-sub">Live NAV history is fetched when you select a scheme.</div></div><span class="tag green" id="apiState">CONNECTING DATA</span></div>
+    <div class="card-head"><div><div class="card-title">Selected scheme</div><div class="card-sub">Historical NAV data is fetched when you select a scheme; the latest source date is displayed below.</div></div><span class="tag green" id="apiState">CONNECTING DATA</span></div>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap"><div><h2 class="fund-title" id="fundName">Parag Parikh Flexi Cap Fund - Direct Plan - Growth</h2><div class="fund-meta" id="fundMeta">Loading scheme metadata...</div><div class="pill-row" id="fundPills"></div></div><div class="head-actions"><button class="btn" id="addCompare">＋ Add to compare</button><button class="btn primary" id="fundExplorer">Search universe</button></div></div>
    </div>
    <div class="kpis">
@@ -220,7 +220,7 @@ function updateOverview(){
  const t1=trailing(d,12),t3=trailing(d,36);$('kpi1y').textContent=t1?fmtPct(t1.cagr):'N/A';$('kpi3y').textContent=t3?fmtPct(t3.cagr):'N/A';$('kpiVol').textContent=fmtPct(annualVol(d));
  $('kpi1y').className='value '+(t1&&t1.cagr>=0?'up':'down');$('kpi3y').className='value '+(t3&&t3.cagr>=0?'up':'down');
  const periods=[1,3,5,10,0];$('returnTable').innerHTML=periods.map(m=>{const x=m?trailing(d,m*12):{abs:(last.nav/d[0].nav-1)*100,cagr:(Math.pow(last.nav/d[0].nav,365.25/((last.date-d[0].date)/86400000))-1)*100};const label=m?m+'Y':'Since inception';return '<tr><td>'+label+'</td><td class="'+(x&&x.cagr>=0?'up':'down')+'">'+(x?fmtPct(x.cagr):'N/A')+'</td><td>'+(x?fmtPct(x.abs):'N/A')+'</td></tr>'}).join('');
- $('apiState').textContent='NAV HISTORY LOADED';$('apiState').className='tag green';renderRange();$('riskVol').textContent=fmtPct(annualVol(d));$('riskDd').textContent=fmtPct(maxDrawdown(d));const dayReturns=[];for(let i=1;i<d.length;i++)dayReturns.push(d[i].nav/d[i-1].nav-1);$('riskPositive').textContent=dayReturns.length?((dayReturns.filter(x=>x>0).length/dayReturns.length)*100).toFixed(1)+'%':'—';$('riskObs').textContent=d.length.toLocaleString('en-IN');
+ const ageDays=Math.max(0,Math.floor((Date.now()-last.date.getTime())/86400000));$('apiState').textContent=ageDays>7?'NAV DATA '+ageDays+'D OLD':'NAV HISTORY LOADED';$('apiState').className='tag '+(ageDays>7?'amber':'green');renderRange();$('riskVol').textContent=fmtPct(annualVol(d));$('riskDd').textContent=fmtPct(maxDrawdown(d));const dayReturns=[];for(let i=1;i<d.length;i++)dayReturns.push(d[i].nav/d[i-1].nav-1);$('riskPositive').textContent=dayReturns.length?((dayReturns.filter(x=>x>0).length/dayReturns.length)*100).toFixed(1)+'%':'—';$('riskObs').textContent=d.length.toLocaleString('en-IN');
  $('selectedCode').textContent='AMFI '+state.code;$('universeFundName').textContent=getName();$('universeFundMeta').textContent=(state.meta?.fund_house||'AMC not supplied')+' · '+(state.meta?.scheme_category||'Category unavailable');$('obsCount').textContent=d.length.toLocaleString('en-IN');$('historyStart').textContent=d[0].date.toLocaleDateString('en-IN',{month:'short',year:'numeric'});
  $('riskDrawdown').innerHTML=downChart(d);$('riskHistogram').innerHTML=histogramSvg(dayReturns.map(x=>x*100),14);
  renderRolling();renderCompare();
