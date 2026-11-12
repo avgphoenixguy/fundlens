@@ -120,7 +120,7 @@
      <details><summary>Tracking error and difference</summary><p>Tracking error is annualised volatility of daily active returns. Tracking difference is scheme performance less benchmark performance over the same matched period. These are central for index funds.</p></details>
      <details><summary>Rolling returns</summary><p>Each eligible NAV date becomes a start date. The engine finds the first available observation on or after the holding-window target date. Adjacent windows overlap and are not independent observations.</p></details>
     </div>
-    <div class="metric-caption">Annualisation uses 252 trading days. Exact-date matches only, no forward-fill. Use a matched TRI series from NSE Indices or the benchmark provider named in the scheme's latest SID / factsheet. Full formulas and caveats are in the repository methodology note.</div>
+    <div class="metric-caption">Annualisation uses 252 trading days for volatility, Sharpe, Sortino, Alpha and tracking error. The Information Ratio follows SEBI's daily arithmetic excess-return formula and is shown only for equity-oriented schemes. Exact-date TRI matches only, no forward-fill. Sources: <a class="source-link" href="https://www.sebi.gov.in/legal/circulars/jan-2025/disclosure-of-risk-adjusted-return-information-ratio-ir-for-mutual-fund-schemes-_90928.html" target="_blank" rel="noopener">SEBI circular ↗</a> · <a class="source-link" href="https://www.amfiindia.com/otherdata/fund-performance/information-ratio" target="_blank" rel="noopener">AMFI IR explainer ↗</a>. Full formulas and caveats are in the repository methodology note.</div>
    </div>
    <div class="panel-box advanced-only" id="holdingsPanel">
     <div class="panel-heading"><div><h3>Portfolio exposure map</h3><p>Import an AMC portfolio disclosure CSV to summarise security and sector weights.</p></div><span class="tag">OPTIONAL FILE</span></div>
@@ -220,7 +220,7 @@
      <div class="metric-card"><div class="m-label">Matched windows</div><div class="m-value" id="relativeCount">0</div><div class="m-note">Same start and end dates for fund and benchmark</div></div>
     </div>
     <div class="chart-wrap" id="relativeRollingChart"><div class="empty">Load a matched benchmark TRI CSV in Advanced view.</div></div>
-    <div class="data-status warn" id="relativeRollingStatus">This analysis appears only when the selected scheme and benchmark have sufficient common date coverage. A price index is not a valid substitute for TRI.</div>
+    <div class="data-status warn" id="relativeRollingStatus">This analysis uses the full available matched history, independently of the Advanced scorecard's 1Y / 3Y / 5Y / 10Y / Max period selector. A price index is not a valid substitute for TRI.</div>
    </div>
    </div>
   </section>
@@ -301,8 +301,7 @@ function parseFlexibleDate(v){if(!v)return null;const s=String(v).trim();let m=s
 function uploadTriFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const rows=parseCSVRows(reader.result);if(rows.length<3)throw new Error('The CSV needs a header and at least two observations.');const header=rows[0].map(x=>x.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim());const dateIdx=header.findIndex(x=>/^(date|index date|nav date)$/.test(x));let valueIdx=header.findIndex(x=>/total returns index|total return index|tri value|index value|tri|close value|value$/.test(x)&&!x.includes('net total'));if(valueIdx<0)valueIdx=header.findIndex(x=>x.includes('net total return'));if(dateIdx<0||valueIdx<0)throw new Error('Required columns: Date and Total Returns Index (TRI).');const parsed=rows.slice(1).map(r=>({date:parseFlexibleDate(r[dateIdx]),value:Number(String(r[valueIdx]||'').replace(/,/g,''))})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.value)&&x.value>0).sort((a,b)=>a.date-b.date);const dedup=new Map(parsed.map(x=>[dateKey(x.date),x.value]));state.benchmarkSeries=Array.from(dedup,([k,value])=>({date:parseFlexibleDate(k),value})).sort((a,b)=>a.date-b.date);if(state.benchmarkSeries.length<30)throw new Error('Only '+state.benchmarkSeries.length+' valid rows found. At least 30 observations are required.');$('benchmarkStatus').className='data-status ok';$('benchmarkStatus').textContent='Loaded '+state.benchmarkSeries.length.toLocaleString('en-IN')+' TRI observations, '+state.benchmarkSeries[0].date.toLocaleDateString('en-IN')+' to '+state.benchmarkSeries.at(-1).date.toLocaleDateString('en-IN')+'.';renderResearchMetrics();renderGuidedResearch();renderRelativeRolling()}catch(e){state.benchmarkSeries=[];$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent=e.message;renderResearchMetrics()}};reader.onerror=()=>{$('benchmarkStatus').textContent='Could not read the selected file.'};reader.readAsText(file)}
 
 function calcRelativeRolling(){
- const p=$('analysisPeriod')?.value||'36';const rows=p==='MAX'?state.data:state.data.filter(x=>x.date>=shiftMonths(state.data.at(-1).date,-Number(p)));
- const matched=matchedReturns(rows);
+ const matched=matchedReturns();
  if(!matched||matched.reason)return {values:[],reason:matched?.reason||'No benchmark TRI loaded.'};
  const pairs=matched.pairs,months=state.window,stride=state.frequency==='daily'?1:state.frequency==='weekly'?5:21,values=[];
  for(let i=0;i<pairs.length;i+=stride){
