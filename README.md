@@ -37,7 +37,7 @@ Open <http://localhost:3000>.
 This is a static HTML app. Import the repository into Vercel and use:
 - Framework preset: **Other**
 - Build command: blank
-- Output directory: `. ` (set it to a single dot: `.`)
+- Output directory: `.`
 - Install command: blank
 
 The connected GitHub repository deploys the root `index.html` on pushes to `main`.
