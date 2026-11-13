@@ -254,7 +254,7 @@ body.studio-open .app-shell{display:block}
      <div class="input-field"><label>Data refresh</label><div class="data-status" id="automaticDataUpdated">Loading automatic research inputs…</div></div>
     </div>
     <div id="benchmarkStatus" class="data-status warn">FundLens is retrieving the scheme's mapped benchmark TRI automatically. Unsupported benchmark families remain unavailable; no substitute index is used.</div>
-    <div class="metric-caption">Sources: <a class="source-link" href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener">NSE Indices historical Total Returns Index values ↗</a> · <a class="source-link" href="https://www.rbi.org.in/" target="_blank" rel="noopener">RBI Current Rates, Government Securities Market ↗</a>. The RBI 10-year G-Sec yield is used as a constant current-rate proxy over the selected NAV sample, not as a daily historical risk-free curve. Scheme benchmark mappings are stored for the curated schemes; unfamiliar schemes are not guessed.</div>
+    <div class="metric-caption">Sources: <a class="source-link" href="https://tipsheet.markets/indices/nifty-500/" target="_blank" rel="noopener">Tipsheet published weekly TRI-derived index series ↗</a> · <a class="source-link" href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener">NSE Indices original TRI source ↗</a> · <a class="source-link" href="https://www.rbi.org.in/?id=10395" target="_blank" rel="noopener">RBI Current Rates ↗</a>. Benchmark regression uses exact-date-matched weekly growth-of-100 observations derived from NSE total-return indices, not raw NSE index levels or price returns. The published method repairs anomalous TRI prints against the corresponding price index. Alpha, Beta, tracking error and FundLens IR estimates use 52 periods per year. Fund-only NAV volatility, Sharpe and Sortino continue to use daily NAV observations and 252 trading days. The RBI 10-year G-Sec yield remains a constant current-rate proxy across the selected historical NAV sample, not a daily historical risk-free curve.</div>
    </div>
    <div class="panel-box advanced-only" id="advancedMetrics">
     <div class="panel-heading"><div><h3>Risk-adjusted and benchmark-relative scorecard</h3><p>Calculated from NAV and automatically retrieved, exact-date matched benchmark TRI where available.</p></div><span class="tag green">TRANSPARENT METHODOLOGY</span></div>
@@ -265,7 +265,7 @@ body.studio-open .app-shell{display:block}
      <div class="metric-card"><div class="m-label">Beta</div><div class="m-value" id="metricBeta">Unavailable</div><div class="m-note">Sensitivity to selected benchmark</div></div>
      <div class="metric-card"><div class="m-label">Information Ratio</div><div class="m-value" id="metricIR">Unavailable</div><div class="m-note">Official AMFI value when supplied, otherwise a labelled FundLens estimate from matched daily TRI</div></div>
      <div class="metric-card"><div class="m-label">Tracking error</div><div class="m-value" id="metricTE">Unavailable</div><div class="m-note">Annualised standard deviation of daily active returns</div></div>
-     <div class="metric-card"><div class="m-label">Benchmark CAGR</div><div class="m-value" id="metricBenchmarkCagr">Unavailable</div><div class="m-note">Matched period, total-return index</div></div>
+     <div class="metric-card"><div class="m-label">Benchmark CAGR</div><div class="m-value" id="metricBenchmarkCagr">Unavailable</div><div class="m-note">Matched period, weekly TRI-derived series</div></div>
      <div class="metric-card"><div class="m-label">Excess CAGR</div><div class="m-value" id="metricExcessCagr">Unavailable</div><div class="m-note">Fund CAGR less benchmark CAGR</div></div>
     </div><div class="metric-caption" id="metricCoverage">Waiting for automatic matched-date TRI retrieval to calculate benchmark-relative metrics. Sharpe and Sortino use the configured risk-free-rate assumption.</div>
    </div>
@@ -280,11 +280,11 @@ body.studio-open .app-shell{display:block}
      <details><summary>Sharpe ratio</summary><p>Annualised mean daily scheme return less the daily risk-free assumption, divided by daily standard deviation, then multiplied by √252. Higher is not automatically better across different categories or periods.</p></details>
      <details><summary>Sortino ratio</summary><p>Annualised mean excess return divided by downside deviation. Downside deviation uses daily returns below the configured target rate. The target assumption must be disclosed.</p></details>
      <details><summary>Alpha and Beta</summary><p>Beta is covariance of scheme and benchmark daily returns divided by benchmark variance. Alpha is the annualised daily CAPM intercept after the configured risk-free assumption. Results depend on benchmark and sample period.</p></details>
-     <details><summary>Information Ratio</summary><p>When available, FundLens displays the official AMFI-reported Information Ratio for the selected scheme plan and reporting period. Separately, when matched daily benchmark TRI is available, FundLens can calculate a research estimate as mean daily arithmetic active return divided by the sample standard deviation of daily active returns, multiplied by √252. The research estimate is not interchangeable with the official AMFI figure.</p></details>
-     <details><summary>Tracking error and difference</summary><p>Tracking error is annualised volatility of daily active returns. Tracking difference is scheme performance less benchmark performance over the same matched period. These are central for index funds.</p></details>
+     <details><summary>Information Ratio</summary><p>When available, FundLens displays the official AMFI-reported Information Ratio for the selected scheme plan and reporting period. Separately, when matched daily benchmark TRI is available, FundLens can calculate a research estimate as mean weekly arithmetic active return divided by the sample standard deviation of weekly active returns, multiplied by √52. The research estimate is not interchangeable with the official AMFI figure.</p></details>
+     <details><summary>Tracking error and difference</summary><p>Tracking error is annualised volatility of weekly active returns, using √52. Tracking difference is scheme performance less benchmark performance over the same matched period. These are central for index funds.</p></details>
      <details><summary>Rolling returns</summary><p>Each eligible NAV date becomes a start date. The engine finds the first available observation on or after the holding-window target date. Adjacent windows overlap and are not independent observations.</p></details>
     </div>
-    <div class="metric-caption">Annualisation uses 252 trading days for NAV volatility, Sharpe, Sortino, FundLens Alpha and tracking error estimates. The current RBI 10-year G-Sec yield is used as a constant proxy, not as a daily maturity-matched risk-free curve. FundLens daily IR estimate uses √252; official AMFI IR is displayed separately when supplied. Exact-date TRI matches only, no forward-fill. Formula choice does not generate benchmark observations: daily Alpha, Beta, tracking error, FundLens IR and benchmark-relative rolling outcomes remain unavailable until the mapped TRI series is retrieved.</div>
+    <div class="metric-caption">Annualisation uses 252 trading days for NAV-only volatility, Sharpe and Sortino. Weekly benchmark-relative Alpha, tracking error and FundLens IR estimates use 52 periods per year. The current RBI 10-year G-Sec yield is used as a constant proxy, not as a daily maturity-matched risk-free curve. Official AMFI IR is displayed separately when supplied. Weekly benchmark observations are exact-date matched to NAV; there is no forward-fill. Formula choice does not generate benchmark observations: daily Alpha, Beta, tracking error, FundLens IR and benchmark-relative rolling outcomes remain unavailable until the mapped TRI series is retrieved.</div>
    </div>
    
 
@@ -459,7 +459,7 @@ const seeds=[
  {code:143269,name:'Parag Parikh Liquid Fund - Direct Plan - Growth'},
  {code:154155,name:'Parag Parikh Large Cap Fund - Direct Plan - Growth'}
 ];
-const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:'',amfiPerformance:null,amfiTer:null,amfiCompareCache:new Map(),portfolioFunds:[]};
+const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:'',benchmarkFrequency:'weekly',benchmarkPeriodsPerYear:52,benchmarkSource:null,amfiPerformance:null,amfiTer:null,amfiCompareCache:new Map(),portfolioFunds:[]};
 const $=id=>document.getElementById(id);
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3200)}
 function fmtPct(v,d=2){return Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(d)+'%':'—'}
@@ -527,7 +527,7 @@ function setBenchmarkDefault(){
  const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
  const el=$('benchmarkName');
  if(el){el.value=Array.from(el.options).some(o=>o.value===name||o.text===name)?name:'';state.benchmarkName=el.value}
- state.benchmarkSeries=[];state.amfiPerformance=null;state.amfiTer=null;
+ state.benchmarkSeries=[];state.benchmarkFrequency='weekly';state.benchmarkPeriodsPerYear=52;state.benchmarkSource=null;state.amfiPerformance=null;state.amfiTer=null;
  if($('benchmarkMapping'))$('benchmarkMapping').textContent='Fetching scheme benchmark from AMFI…';
  if($('benchmarkStatus')){$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='FundLens is retrieving scheme benchmark and official IR data from AMFI.'}
 }
@@ -615,36 +615,38 @@ async function loadAutomaticResearchInputs(request){
    const url='/api/benchmark?index='+encodeURIComponent(apiName)+'&start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end);
    const res=await fetch(url,{headers:{'Accept':'application/json'}});
    const body=await res.json();
-   if(!res.ok)throw new Error(body.error||'NSE TRI endpoint returned HTTP '+res.status);
+   if(!res.ok)throw new Error(body.error||'Weekly TRI-derived benchmark endpoint returned HTTP '+res.status);
    const data=(body.data||[]).map(x=>({date:parseFlexibleDate(x.date),value:Number(x.value)}))
     .filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.value)&&x.value>0)
     .sort((a,b)=>a.date-b.date);
-   if(data.length<30)throw new Error('Fewer than 30 TRI observations were returned.');
+   if(body.resolution!=='weekly'||Number(body.periodsPerYear)!==52)throw new Error('Benchmark source did not confirm weekly frequency and 52 annual periods.');if(data.length<30)throw new Error('Fewer than 30 weekly TRI-derived observations were returned.');
    if(request!==state.loadRequest)return;
-   state.benchmarkSeries=data;
+   state.benchmarkSeries=data;state.benchmarkFrequency=body.resolution;state.benchmarkPeriodsPerYear=Number(body.periodsPerYear);state.benchmarkSource=body;
    benchmarkResult={ok:true,body};
    $('benchmarkStatus').className='data-status ok';
-   $('benchmarkStatus').textContent='Loaded '+data.length.toLocaleString('en-IN')+' NSE TRI observations for AMFI-mapped '+mappedName+', '+data[0].date.toLocaleDateString('en-IN')+' to '+data.at(-1).date.toLocaleDateString('en-IN')+'. Exact-date matching only.';
+   $('benchmarkStatus').textContent='Loaded '+data.length.toLocaleString('en-IN')+' weekly TRI-derived observations for AMFI-mapped '+mappedName+', '+data[0].date.toLocaleDateString('en-IN')+' to '+data.at(-1).date.toLocaleDateString('en-IN')+'. Source: Tipsheet / NSE Indices. Exact-date matching only; annualised at 52 periods per year.';
   }catch(e){
-   state.benchmarkSeries=[];
+   state.benchmarkSeries=[];state.benchmarkSource=null;state.benchmarkFrequency='weekly';state.benchmarkPeriodsPerYear=52;
    $('benchmarkStatus').className='data-status warn';
-   $('benchmarkStatus').textContent='AMFI mapping found: '+(mappedName||'unknown')+'. Automatic NSE TRI retrieval failed: '+e.message+'. NAV ratios and AMFI-reported IR remain available; Alpha / Beta / calculated tracking ratios are suppressed.';
+   $('benchmarkStatus').textContent='AMFI mapping found: '+(mappedName||'unknown')+'. Weekly TRI-derived retrieval failed: '+e.message+'. NAV ratios and AMFI-reported IR remain available; Alpha / Beta / calculated tracking ratios are suppressed.';
    benchmarkResult={ok:false,error:e.message};
   }
  }else{
-  state.benchmarkSeries=[];
+  state.benchmarkSeries=[];state.benchmarkSource=null;state.benchmarkFrequency='weekly';state.benchmarkPeriodsPerYear=52;
   $('benchmarkStatus').className='data-status warn';
-  $('benchmarkStatus').textContent=amfiResult.ok?'AMFI benchmark: '+(mappedName||'not supplied')+'. Automatic TRI history is not connected for this benchmark family. Official AMFI IR may still be available; Alpha / Beta / tracking error are suppressed.':'AMFI benchmark mapping unavailable. Benchmark-relative metrics are suppressed rather than guessed.';
-  benchmarkResult={ok:false,error:'No supported daily TRI connector for benchmark'};
+  $('benchmarkStatus').textContent=amfiResult.ok?'AMFI benchmark: '+(mappedName||'not supplied')+'. No weekly TRI-derived connector is configured for this benchmark family. Official AMFI IR may still be available; Alpha / Beta / tracking error are suppressed.':'AMFI benchmark mapping unavailable. Benchmark-relative metrics are suppressed rather than guessed.';
+  benchmarkResult={ok:false,error:'No supported weekly TRI-derived connector for benchmark'};
  }
  if(request!==state.loadRequest)return;
- $('automaticDataUpdated').textContent='RBI '+(rfResult.ok?'live':'fallback')+' · AMFI '+(amfiResult.ok?'scheme data loaded':'unavailable')+' · TER '+(terResult.ok?'refreshed':'unavailable')+' · TRI '+(benchmarkResult.ok?'loaded':'not available');
+ $('automaticDataUpdated').textContent='RBI '+(rfResult.ok?'live':'fallback')+' · AMFI '+(amfiResult.ok?'scheme data loaded':'unavailable')+' · TER '+(terResult.ok?'refreshed':'unavailable')+' · Weekly TRI '+(benchmarkResult.ok?'loaded':'not available');
  renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare();renderDisclosureLens();
 }
 function calcRelativeRolling(){
  const matched=matchedReturns();
- if(!matched||matched.reason)return {values:[],reason:matched?.reason||'No benchmark TRI loaded.'};
- const pairs=matched.pairs,months=state.window,stride=state.frequency==='daily'?1:state.frequency==='weekly'?5:21,values=[];
+ if(!matched||matched.reason)return {values:[],reason:matched?.reason||'No weekly TRI-derived benchmark series loaded.'};
+ const pairs=matched.pairs,months=state.window;
+ // The benchmark source is weekly. Daily NAV start-date frequency cannot create daily benchmark observations.
+ const stride=state.frequency==='monthly'?4:1,values=[];
  for(let i=0;i<pairs.length;i+=stride){
   const target=shiftMonths(pairs[i].date,months),j=lowerBound(pairs,target);
   if(j>=pairs.length)break;
@@ -655,7 +657,7 @@ function calcRelativeRolling(){
   const benchCagr=(Math.pow(pairs[j].bench/pairs[i].bench,1/years)-1)*100;
   values.push({date:pairs[i].date,value:fundCagr-benchCagr,fundCagr,benchCagr,end:pairs[j].date});
  }
- return {values,reason:values.length>=5?'':'Fewer than five matched holding windows. Reduce the holding period or load more benchmark history.'};
+ return {values,reason:values.length>=5?'':'Fewer than five weekly matched holding windows. Reduce the holding period or load more benchmark history.'};
 }
 function renderRelativeRolling(){
  const result=calcRelativeRolling(),values=result.values,v=values.map(x=>x.value),beat=v.length?v.filter(x=>x>0).length/v.length*100:NaN;
@@ -663,8 +665,9 @@ function renderRelativeRolling(){
  $('relativeMedian').textContent=v.length?fmtPct(median(v)):'Unavailable';
  $('relativeCount').textContent=values.length.toLocaleString('en-IN');
  $('relativeRollingStatus').className='data-status '+(values.length?'ok':'warn');
- $('relativeRollingStatus').textContent=values.length?'Matched '+values.length+' windows · '+state.benchmarkName+' · '+state.window+' months · '+state.frequency+' starts. Positive means fund CAGR exceeded benchmark CAGR.':'Benchmark-relative rolling analysis unavailable: '+result.reason;
- $('relativeRollingChart').innerHTML=values.length?chartSvg(values,{suffix:'%',zeroFloor:true,color:'#477fb8',label:'Rolling excess CAGR over benchmark',xLabel:'Investment start date',yLabel:'Fund CAGR less benchmark CAGR (%)'}):'<div class="empty">Load a sufficiently long matched TRI series to see relative rolling outcomes.</div>';
+ const startCadence=state.frequency==='monthly'?'monthly-spaced starts':'weekly starts';
+ $('relativeRollingStatus').textContent=values.length?'Matched '+values.length+' windows · '+state.benchmarkName+' · '+state.window+' months · '+startCadence+'. Weekly TRI-derived observations; positive means fund CAGR exceeded benchmark CAGR.':'Benchmark-relative rolling analysis unavailable: '+result.reason;
+ $('relativeRollingChart').innerHTML=values.length?chartSvg(values,{suffix:'%',zeroFloor:true,color:'#477fb8',label:'Rolling excess CAGR over benchmark',xLabel:'Weekly investment start date',yLabel:'Fund CAGR less benchmark CAGR (%)'}):'<div class="empty">Load a sufficiently long weekly TRI-derived series to see relative rolling outcomes.</div>';
 }
 function analysisWindow(data){
  const p=$('analysisPeriod')?.value||'36';
@@ -690,15 +693,49 @@ function matchedReturns(data=state.data,benchmarkSeries=state.benchmarkSeries){
  if(!benchmarkSeries?.length||!data?.length)return null;
  const bmap=new Map(benchmarkSeries.map(x=>[dateKey(x.date),x.value]));
  const pairs=data.map(x=>({date:x.date,fund:x.nav,bench:bmap.get(dateKey(x.date))})).filter(x=>Number.isFinite(x.bench));
- if(pairs.length<31)return{pairs,returns:[],reason:'Fewer than 31 common dates. Check that the TRI series covers the scheme history.'};
+ if(pairs.length<31)return{pairs,returns:[],reason:'Fewer than 31 exact common weekly dates. Check that the published weekly TRI-derived series covers the scheme history.'};
  const returns=[];
  for(let i=1;i<pairs.length;i++){
   const fr=pairs[i].fund/pairs[i-1].fund-1,br=pairs[i].bench/pairs[i-1].bench-1;
   if(Number.isFinite(fr)&&Number.isFinite(br))returns.push({date:pairs[i].date,fund:fr,bench:br,active:fr-br});
  }
- return{pairs,returns,reason:returns.length>=30?'':'Fewer than 30 matched return observations.'};
+ return{pairs,returns,reason:returns.length>=30?'':'Fewer than 30 matched weekly return observations.',frequency:'weekly',periodsPerYear:52};
 }
-function calcAdvancedStats(data=state.data,benchmarkSeries=state.benchmarkSeries){const window=analysisWindow(data),d=window.data;if(!window.valid)return{reason:window.reason};if(d.length<30)return{reason:'At least 30 NAV return observations are required for the selected period.'};const fr=[];for(let i=1;i<d.length;i++)fr.push(d[i].nav/d[i-1].nav-1);const rf=Math.pow(1+Number($('rfRate')?.value||0)/100,1/252)-1,sigma=stdev(fr),downside=Math.sqrt(avg(fr.map(x=>Math.pow(Math.min(0,x-rf),2)))),mean=avg(fr);const base={sharpe:sigma>0?(mean-rf)/sigma*Math.sqrt(252):NaN,sortino:downside>0?(mean-rf)/downside*Math.sqrt(252):NaN,vol:sigma*Math.sqrt(252)*100};const matched=matchedReturns(d,benchmarkSeries);if(!matched||matched.reason)return{...base,reason:matched?.reason||'Benchmark TRI not loaded.',matched:matched?.returns?.length||0};const r=matched.returns,ar=r.map(x=>x.active),f=r.map(x=>x.fund),b=r.map(x=>x.bench),fm=avg(f),bm=avg(b),variance=stdev(b)**2,cov=variance>0?f.reduce((s,x,i)=>s+(x-fm)*(b[i]-bm),0)/(f.length-1):NaN,beta=variance>0?cov/variance:NaN,alpha=((fm-rf)-beta*(bm-rf))*252*100,te=stdev(ar)*Math.sqrt(252)*100,ir=stdev(ar)>0?(avg(ar)/stdev(ar))*Math.sqrt(252):NaN,first=matched.pairs[0],last=matched.pairs.at(-1),years=(last.date-first.date)/(365.25*86400000),fc=years>0?(Math.pow(last.fund/first.fund,1/years)-1)*100:NaN,bc=years>0?(Math.pow(last.bench/first.bench,1/years)-1)*100:NaN;return{...base,beta,alpha,te,ir,benchCagr:bc,excessCagr:fc-bc,matched:r.length,from:first.date,to:last.date}}
+function calcAdvancedStats(data=state.data,benchmarkSeries=state.benchmarkSeries){
+ const window=analysisWindow(data),d=window.data;
+ if(!window.valid)return{reason:window.reason};
+ if(d.length<30)return{reason:'At least 30 NAV return observations are required for the selected period.'};
+ // Fund-only Sharpe, Sortino and volatility continue to use daily NAV observations.
+ const dailyReturns=[];
+ for(let i=1;i<d.length;i++)dailyReturns.push(d[i].nav/d[i-1].nav-1);
+ const annualRate=Number($('rfRate')?.value||0);
+ const rfDaily=Math.pow(1+annualRate/100,1/252)-1;
+ const sigma=stdev(dailyReturns);
+ const downside=Math.sqrt(avg(dailyReturns.map(x=>Math.pow(Math.min(0,x-rfDaily),2))));
+ const mean=avg(dailyReturns);
+ const base={
+  sharpe:sigma>0?(mean-rfDaily)/sigma*Math.sqrt(252):NaN,
+  sortino:downside>0?(mean-rfDaily)/downside*Math.sqrt(252):NaN,
+  vol:sigma*Math.sqrt(252)*100
+ };
+ // Benchmark-relative regression uses only exact-date-matched weekly NAV and TRI-derived observations.
+ const matched=matchedReturns(d,benchmarkSeries);
+ if(!matched||matched.reason)return{...base,reason:matched?.reason||'Weekly TRI-derived benchmark series not loaded.',matched:matched?.returns?.length||0};
+ const periodsPerYear=52;
+ const rfWeekly=Math.pow(1+annualRate/100,1/periodsPerYear)-1;
+ const r=matched.returns,ar=r.map(x=>x.active),f=r.map(x=>x.fund),b=r.map(x=>x.bench);
+ const fm=avg(f),bm=avg(b),variance=stdev(b)**2;
+ const covariance=variance>0?f.reduce((sum,x,i)=>sum+(x-fm)*(b[i]-bm),0)/(f.length-1):NaN;
+ const beta=variance>0?covariance/variance:NaN;
+ const alpha=Number.isFinite(beta)?((fm-rfWeekly)-beta*(bm-rfWeekly))*periodsPerYear*100:NaN;
+ const te=stdev(ar)*Math.sqrt(periodsPerYear)*100;
+ const ir=stdev(ar)>0?(avg(ar)/stdev(ar))*Math.sqrt(periodsPerYear):NaN;
+ const first=matched.pairs[0],last=matched.pairs.at(-1);
+ const years=(last.date-first.date)/(365.25*86400000);
+ const fundCagr=years>0?(Math.pow(last.fund/first.fund,1/years)-1)*100:NaN;
+ const benchmarkCagr=years>0?(Math.pow(last.bench/first.bench,1/years)-1)*100:NaN;
+ return{...base,beta,alpha,te,ir,benchCagr:benchmarkCagr,excessCagr:fundCagr-benchmarkCagr,matched:r.length,from:first.date,to:last.date,benchmarkFrequency:'weekly',periodsPerYear};
+}
 function setMetric(id,value,note){const el=$(id);if(!el)return;el.textContent=value;el.closest('.metric-card')?.classList.toggle('unavailable',value==='Unavailable'||value==='—');const n=el.closest('.metric-card')?.querySelector('.m-note');if(note&&n)n.textContent=note}
 function renderResearchMetrics(){
  if(!state.data.length)return;
@@ -706,13 +743,13 @@ function renderResearchMetrics(){
  setMetric('metricSharpe',Number.isFinite(m.sharpe)?fmtNum(m.sharpe,2):'Unavailable','NAV-derived annualised estimate using the displayed RBI long-dated G-Sec proxy.');
  setMetric('metricSortino',Number.isFinite(m.sortino)?fmtNum(m.sortino,2):'Unavailable','NAV-derived downside estimate using the same RBI G-Sec proxy as the target rate.');
  const primary=kind==='equity',passive=kind==='index',benchmarkSuitable=ready&&(primary||passive);
- setMetric('metricAlpha',primary?(ready?fmtPct(m.alpha):'Unavailable'):'Not primary',primary?'CAPM daily regression intercept, annualised. Requires matched Tier 1 benchmark TRI.':'Not a primary evaluation measure for this category.');
- setMetric('metricBeta',primary?(ready?fmtNum(m.beta,2):'Unavailable'):'Not primary',primary?'Matched daily NAV and TRI returns.':'Use category-specific risk measures instead.');
+ setMetric('metricAlpha',primary?(ready?fmtPct(m.alpha):'Unavailable'):'Not primary',primary?'CAPM weekly regression intercept, annualised. Requires exact-date-matched weekly TRI-derived observations; 52 periods per year.':'Not a primary evaluation measure for this category.');
+ setMetric('metricBeta',primary?(ready?fmtNum(m.beta,2):'Unavailable'):'Not primary',primary?'Matched weekly NAV and TRI-derived benchmark returns.':'Use category-specific risk measures instead.');
  const periodKey=({'12':'1Y','36':'3Y','60':'5Y','120':'10Y'})[$('analysisPeriod')?.value]||'';
  const officialIR=primary&&state.amfiPerformance?.informationRatio?.[periodKey];
  const irIsOfficial=officialIR!==null&&officialIR!==undefined&&officialIR!==''&&Number.isFinite(Number(officialIR));
  const irValue=irIsOfficial?fmtNum(Number(officialIR),3):(ready&&primary?fmtNum(m.ir,2):'Unavailable');
- const irNote=irIsOfficial?'Official AMFI-disclosed '+periodKey+' IR · '+(state.amfiPerformance?.plan||planForScheme(getName()))+' plan · AMFI report '+(state.amfiPerformance?.reportDate||'date not supplied')+'.':'FundLens annualised daily research estimate (√252), not AMC-reported IR. Requires exact-date-matched Tier 1 TRI.';
+ const irNote=irIsOfficial?'Official AMFI-disclosed '+periodKey+' IR · '+(state.amfiPerformance?.plan||planForScheme(getName()))+' plan · AMFI report '+(state.amfiPerformance?.reportDate||'date not supplied')+'.':'FundLens annualised weekly research estimate (√52), not AMC-reported IR. Requires exact-date-matched weekly TRI-derived observations.';
  setMetric('metricIR',primary?irValue:'Not primary',irIsOfficial||ready?irNote:'No AMFI IR value for this period and no matched TRI series. No IR is invented.');
  const amfiPeriod=periodKey?state.amfiPerformance?.trailingReturns?.[periodKey]:null;
  const amfiFund=amfiPeriod?.fund!==null&&amfiPeriod?.fund!==undefined&&amfiPeriod?.fund!==''?Number(amfiPeriod.fund):NaN;
@@ -720,15 +757,15 @@ function renderResearchMetrics(){
  const amfiReturnsReady=Number.isFinite(amfiFund)&&Number.isFinite(amfiBench);
  const benchmarkCagr=benchmarkSuitable?m.benchCagr:(amfiReturnsReady?amfiBench:NaN);
  const excessCagr=benchmarkSuitable?m.excessCagr:(amfiReturnsReady?amfiFund-amfiBench:NaN);
- setMetric('metricTE',benchmarkSuitable?fmtPct(m.te):passive?'Unavailable':'Not primary',passive?'Annualised standard deviation of daily active returns.':'Tracking error requires matched daily TRI.');
- setMetric('metricBenchmarkCagr',Number.isFinite(benchmarkCagr)?fmtPct(benchmarkCagr):'Unavailable',benchmarkSuitable?'Matched daily TRI over the same dates.':'AMFI-reported benchmark trailing return for '+(periodKey||'selected')+' period; report '+(state.amfiPerformance?.reportDate||'date unavailable')+'.');
+ setMetric('metricTE',benchmarkSuitable?fmtPct(m.te):passive?'Unavailable':'Not primary',passive?'Annualised standard deviation of weekly active returns (√52).':'Tracking error requires matched weekly TRI-derived observations.');
+ setMetric('metricBenchmarkCagr',Number.isFinite(benchmarkCagr)?fmtPct(benchmarkCagr):'Unavailable',benchmarkSuitable?'Matched weekly TRI-derived observations over the same dates (52 periods per year).':'AMFI-reported benchmark trailing return for '+(periodKey||'selected')+' period; report '+(state.amfiPerformance?.reportDate||'date unavailable')+'.');
  setMetric('metricExcessCagr',Number.isFinite(excessCagr)?fmtPct(excessCagr):'Unavailable',benchmarkSuitable?'Fund CAGR less benchmark CAGR over matched dates.':'AMFI-reported fund return less AMFI-reported benchmark return for '+(periodKey||'selected')+' period. Not risk-adjusted.');
  const rf=Number($('rfRate')?.value||0),period=$('analysisPeriod')?.selectedOptions?.[0]?.text||'3 years';
  const report=state.amfiPerformance?.reportDate?' AMFI scheme data as of '+state.amfiPerformance.reportDate+'.':'';
  $('metricCoverage').textContent=ready?'Category lens: '+categoryName(state.meta,getName())+'. Analysis period: '+period+'. Matched '+m.matched.toLocaleString('en-IN')+' daily returns, '+m.from.toLocaleDateString('en-IN')+' to '+m.to.toLocaleDateString('en-IN')+'. Benchmark: '+state.benchmarkName+'. Risk-free proxy: RBI 10Y G-Sec '+rf.toFixed(4)+'% p.a., held constant through the selected sample.'+report:'Analysis period: '+period+'. Sharpe / Sortino use current RBI 10Y G-Sec proxy '+rf.toFixed(4)+'% p.a., held constant through the sample.'+(amfiReturnsReady?' AMFI reports fund trailing return '+fmtPct(amfiFund)+' vs benchmark '+fmtPct(amfiBench)+' for '+period+'.':'')+(irIsOfficial?' Official AMFI IR for this plan / period: '+Number(officialIR).toFixed(3)+'.':'')+' Alpha / Beta / tracking error still require matched daily benchmark TRI.';
  renderCategoryLens(m);
 }
-function renderCategoryLens(m){const kind=classifyScheme(state.meta,getName()),ref=referenceDisclosure[state.code]||{},roll=state.rolling||[];let h='<div class="method-row"><b>Detected category</b><span>'+escapeHtml(categoryName(state.meta,getName()))+'</span></div>';if(kind==='equity'){h+='<div class="method-row"><b>Evaluation lens</b><span>Rolling consistency, benchmark-relative excess return, downside risk and cost.</span></div><div class="method-row"><b>Positive rolling windows</b><span>'+(roll.length?(roll.filter(x=>x.value>0).length/roll.length*100).toFixed(1)+'%':'Insufficient history')+'</span></div><div class="method-row"><b>Benchmark</b><span>'+escapeHtml(state.benchmarkName||'Confirm from latest SID / factsheet')+'</span></div><div class="method-row"><b>Relevant measures</b><span>Sharpe, Sortino, Alpha, Beta, Information Ratio, tracking error, drawdown.</span></div>'}else if(kind==='index'){h+='<div class="method-row"><b>Evaluation lens</b><span>Tracking difference, tracking error, Direct-plan TER and replication.</span></div><div class="method-row"><b>Tracking difference</b><span>'+(Number.isFinite(m.excessCagr)?fmtPct(m.excessCagr):'Requires matched TRI')+'</span></div><div class="method-row"><b>Tracking error</b><span>'+(Number.isFinite(m.te)?fmtPct(m.te):'Requires matched daily TRI')+'</span></div><div class="method-row"><b>Cost / TER</b><span>'+(ref.cost?ref.cost+' ('+ref.costLabel+')':'Not sourced for this scheme')+'</span></div>'}else if(kind==='debt'){h+='<div class="method-row"><b>Evaluation lens</b><span>Credit quality, YTM, modified duration, maturity profile, liquidity and cost.</span></div><div class="method-row"><b>YTM</b><span>'+(ref.reported?.match(/YTM [^·]+/)?.[0]||'Requires latest AMC factsheet')+'</span></div><div class="method-row"><b>Modified duration</b><span>'+(ref.reported?.match(/Modified duration [^·]+/)?.[0]||'Requires latest AMC factsheet')+'</span></div><div class="method-row"><b>Credit quality</b><span>Not inferred from NAV. Inspect the portfolio disclosure.</span></div>'}else{h+='<div class="method-row"><b>Evaluation lens</b><span>Equity / debt allocation, sleeve-level risk, duration, credit exposures and rebalancing.</span></div><div class="method-row"><b>Debt-side disclosures</b><span>'+(ref.reported||'YTM and duration require latest AMC factsheet')+'</span></div><div class="method-row"><b>Allocation split</b><span>Automatically retrieved public disclosures are available only for supported AMC holdings adapters; this is not an account portfolio.</span></div>'}$('categoryLens').innerHTML=h}
+function renderCategoryLens(m){const kind=classifyScheme(state.meta,getName()),ref=referenceDisclosure[state.code]||{},roll=state.rolling||[];let h='<div class="method-row"><b>Detected category</b><span>'+escapeHtml(categoryName(state.meta,getName()))+'</span></div>';if(kind==='equity'){h+='<div class="method-row"><b>Evaluation lens</b><span>Rolling consistency, benchmark-relative excess return, downside risk and cost.</span></div><div class="method-row"><b>Positive rolling windows</b><span>'+(roll.length?(roll.filter(x=>x.value>0).length/roll.length*100).toFixed(1)+'%':'Insufficient history')+'</span></div><div class="method-row"><b>Benchmark</b><span>'+escapeHtml(state.benchmarkName||'Confirm from latest SID / factsheet')+'</span></div><div class="method-row"><b>Relevant measures</b><span>Sharpe, Sortino, Alpha, Beta, Information Ratio, tracking error, drawdown.</span></div>'}else if(kind==='index'){h+='<div class="method-row"><b>Evaluation lens</b><span>Tracking difference, tracking error, Direct-plan TER and replication.</span></div><div class="method-row"><b>Tracking difference</b><span>'+(Number.isFinite(m.excessCagr)?fmtPct(m.excessCagr):'Requires matched TRI')+'</span></div><div class="method-row"><b>Tracking error</b><span>'+(Number.isFinite(m.te)?fmtPct(m.te):'Requires matched weekly TRI-derived observations')+'</span></div><div class="method-row"><b>Cost / TER</b><span>'+(ref.cost?ref.cost+' ('+ref.costLabel+')':'Not sourced for this scheme')+'</span></div>'}else if(kind==='debt'){h+='<div class="method-row"><b>Evaluation lens</b><span>Credit quality, YTM, modified duration, maturity profile, liquidity and cost.</span></div><div class="method-row"><b>YTM</b><span>'+(ref.reported?.match(/YTM [^·]+/)?.[0]||'Requires latest AMC factsheet')+'</span></div><div class="method-row"><b>Modified duration</b><span>'+(ref.reported?.match(/Modified duration [^·]+/)?.[0]||'Requires latest AMC factsheet')+'</span></div><div class="method-row"><b>Credit quality</b><span>Not inferred from NAV. Inspect the portfolio disclosure.</span></div>'}else{h+='<div class="method-row"><b>Evaluation lens</b><span>Equity / debt allocation, sleeve-level risk, duration, credit exposures and rebalancing.</span></div><div class="method-row"><b>Debt-side disclosures</b><span>'+(ref.reported||'YTM and duration require latest AMC factsheet')+'</span></div><div class="method-row"><b>Allocation split</b><span>Automatically retrieved public disclosures are available only for supported AMC holdings adapters; this is not an account portfolio.</span></div>'}$('categoryLens').innerHTML=h}
 function renderDisclosureLens(){
  const live=state.amfiPerformance,ref=referenceDisclosure[state.code]||{};
  if(!live&&!referenceDisclosure[state.code]){
@@ -750,7 +787,7 @@ function renderDisclosureLens(){
  const terSourceNote=state.amfiTer?'Official AMFI TER workbook · '+state.amfiTer.terDate:'TER fallback is a dated curated source; automatic AMFI TER lookup may be unavailable.';
  $('disclosureLens').innerHTML='<div class="method-row"><b>Scheme AUM</b><span>'+escapeHtml(aum)+'</span></div><div class="method-row"><b>Total expense ratio</b><span>'+escapeHtml(cost)+'</span></div><div class="method-row"><b>Cost source / date</b><span>'+escapeHtml(terSourceNote)+'</span></div><div class="method-row"><b>Riskometer</b><span>'+escapeHtml(risk)+(live?' · AMFI':'')+'</span></div><div class="method-row"><b>Benchmark</b><span>'+escapeHtml(benchmark)+'</span></div><div class="method-row"><b>AMFI-reported IR</b><span>'+escapeHtml(irText)+'</span></div><div class="method-row"><b>AMFI trailing performance</b><span>'+escapeHtml(returnText)+'</span></div><div class="data-status '+(live?'ok':'warn')+'">'+escapeHtml(live?'Automatically retrieved from AMFI. Report date: '+(live.reportDate||'not supplied')+'. Plan: '+live.plan+'.':'Using a dated curated AMC snapshot only. This is not a live disclosure.')+'</div><div class="metric-caption">Source: <a class="source-link" href="'+sourceLink+'" target="_blank" rel="noopener">'+escapeHtml(sourceLabel)+' ↗</a>. AMFI AUM, benchmark, Riskometer, official IR and returns are kept separate from FundLens NAV-derived metrics. TER comes from the separate monthly AMFI workbook when available.</div>';
 }
-function renderGuidedResearch(){if(!state.data.length)return;const roll=state.rolling?.length?state.rolling:calcRolling(state.data,Number($('windowSlider')?.value||36),$('frequency')?.value||'weekly','cagr'),v=roll.map(x=>x.value),positive=v.length?v.filter(x=>x>0).length/v.length*100:NaN,med=median(v),dd=maxDrawdown(state.data);$('guidedPositive').textContent=Number.isFinite(positive)?positive.toFixed(1)+'%':'Not enough history';$('guidedMedian').textContent=Number.isFinite(med)?fmtPct(med):'—';$('guidedDrawdown').textContent=Number.isFinite(dd)?fmtPct(dd):'—';$('guidedPositiveNote').textContent=roll.length+' overlapping windows · '+Number($('windowSlider')?.value||36)+'-month holding period';$('guidedMedianNote').textContent='Median annualised CAGR across eligible start dates';const m=calcAdvancedStats(),kind=classifyScheme(state.meta,getName());let n=roll.length?'Across '+roll.length+' overlapping historical windows, '+positive.toFixed(1)+'% ended positive. The median annualised outcome was '+fmtPct(med)+'. Past outcomes do not predict future returns.':'Not enough history for this rolling window. Try a shorter holding period.';n+=Number.isFinite(m.beta)?' Against '+state.benchmarkName+', matched daily TRI analysis shows '+fmtPct(m.excessCagr)+' CAGR difference over the common period. Open Advanced for the full risk-adjusted scorecard.':(state.amfiPerformance?.trailingReturns?.['3Y']?.fund!==null&&state.amfiPerformance?.trailingReturns?.['3Y']?.fund!==undefined&&state.amfiPerformance?.trailingReturns?.['3Y']?.benchmark!==null&&state.amfiPerformance?.trailingReturns?.['3Y']?.benchmark!==undefined?' AMFI reports a 3Y trailing return of '+fmtPct(Number(state.amfiPerformance.trailingReturns['3Y'].fund))+' versus '+fmtPct(Number(state.amfiPerformance.trailingReturns['3Y'].benchmark))+' for the scheme benchmark, report '+state.amfiPerformance.reportDate+'. Daily TRI is not currently available, so Alpha / Beta remain suppressed.':' Benchmark-relative metrics are withheld until a matched daily TRI is available.');if(kind==='debt')n+=' For debt funds, also examine credit quality, yield and duration.';if(kind==='hybrid')n+=' For hybrid funds, inspect equity and debt exposures separately.';$('guidedNarrative').textContent=n}
+function renderGuidedResearch(){if(!state.data.length)return;const roll=state.rolling?.length?state.rolling:calcRolling(state.data,Number($('windowSlider')?.value||36),$('frequency')?.value||'weekly','cagr'),v=roll.map(x=>x.value),positive=v.length?v.filter(x=>x>0).length/v.length*100:NaN,med=median(v),dd=maxDrawdown(state.data);$('guidedPositive').textContent=Number.isFinite(positive)?positive.toFixed(1)+'%':'Not enough history';$('guidedMedian').textContent=Number.isFinite(med)?fmtPct(med):'—';$('guidedDrawdown').textContent=Number.isFinite(dd)?fmtPct(dd):'—';$('guidedPositiveNote').textContent=roll.length+' overlapping windows · '+Number($('windowSlider')?.value||36)+'-month holding period';$('guidedMedianNote').textContent='Median annualised CAGR across eligible start dates';const m=calcAdvancedStats(),kind=classifyScheme(state.meta,getName());let n=roll.length?'Across '+roll.length+' overlapping historical windows, '+positive.toFixed(1)+'% ended positive. The median annualised outcome was '+fmtPct(med)+'. Past outcomes do not predict future returns.':'Not enough history for this rolling window. Try a shorter holding period.';n+=Number.isFinite(m.beta)?' Against '+state.benchmarkName+', matched weekly TRI-derived analysis shows '+fmtPct(m.excessCagr)+' CAGR difference over the common period. Open Advanced for the full risk-adjusted scorecard.':(state.amfiPerformance?.trailingReturns?.['3Y']?.fund!==null&&state.amfiPerformance?.trailingReturns?.['3Y']?.fund!==undefined&&state.amfiPerformance?.trailingReturns?.['3Y']?.benchmark!==null&&state.amfiPerformance?.trailingReturns?.['3Y']?.benchmark!==undefined?' AMFI reports a 3Y trailing return of '+fmtPct(Number(state.amfiPerformance.trailingReturns['3Y'].fund))+' versus '+fmtPct(Number(state.amfiPerformance.trailingReturns['3Y'].benchmark))+' for the scheme benchmark, report '+state.amfiPerformance.reportDate+'. Weekly TRI-derived observations are not currently available, so Alpha / Beta remain suppressed.':' Benchmark-relative metrics are withheld until a matched weekly TRI-derived series is available.');if(kind==='debt')n+=' For debt funds, also examine credit quality, yield and duration.';if(kind==='hybrid')n+=' For hybrid funds, inspect equity and debt exposures separately.';$('guidedNarrative').textContent=n}
 function setExperience(view){document.body.dataset.view=view;document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));try{sessionStorage.setItem('fundlens-view',view)}catch(e){}if(state.page==='compare')renderCompare()}
 document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.addEventListener('click',()=>setExperience(b.dataset.view)));
 $('rfRate')?.addEventListener('input',()=>{renderResearchMetrics();renderGuidedResearch();renderCompare()});
@@ -1142,7 +1179,7 @@ async function renderCompare(){
  const sameOption=identities.length>0&&identities.every(x=>x.option===identities[0].option);
  const sameBenchmark=identities.length>0&&!!identities[0].benchmark&&identities.every(x=>x.benchmark===identities[0].benchmark);
  const sharedLatestNavDate=items.length>0&&items.every(x=>x.data.length&&dateKey(x.data[x.data.length-1].date)===dateKey(items[0].data[items[0].data.length-1].date));
- const benchmarkMatchesLoadedSeries=sameBenchmark&&sharedLatestNavDate&&state.benchmarkSeries.length>0&&normalizedBenchmark(state.benchmarkName)===identities[0].benchmark;
+ const benchmarkMatchesLoadedSeries=sameBenchmark&&sharedLatestNavDate&&state.benchmarkSeries.length>0&&state.benchmarkFrequency==='weekly'&&state.benchmarkPeriodsPerYear===52&&normalizedBenchmark(state.benchmarkName)===identities[0].benchmark;
  const comparisonStats=new Map(items.map(x=>[x.code,benchmarkMatchesLoadedSeries?calcAdvancedStats(x.data,state.benchmarkSeries):{}]));
  const val=(code,key,digits=2)=>{const v=comparisonStats.get(code)?.[key];return Number.isFinite(v)?fmtNum(v,digits):'Unavailable'};
  const pct=(code,key)=>{const v=comparisonStats.get(code)?.[key];return Number.isFinite(v)?fmtPct(v):'Unavailable'};
@@ -1178,8 +1215,8 @@ async function renderCompare(){
  }).join('');
  const identityOk=sameSubcategory&&samePlan&&sameOption&&sameBenchmark;
  const identityText=items.length<2?'Add a second scheme for a like-for-like peer comparison.':identityOk?'Like-for-like set: '+identities[0].subcategory+' · '+identities[0].plan+' plan · '+identities[0].option+' option · '+identities[0].benchmarkLabel+'.':'Scheme identity is not fully confirmed. Treat the table as descriptive, not like-for-like.';
- const triText=benchmarkMatchesLoadedSeries?'FundLens Alpha, Beta and tracking-error estimates use the mapped benchmark TRI with exact-date matching over a common NAV end date and the selected period.':!sharedLatestNavDate?'The selected schemes do not share the same latest NAV date. Benchmark regression estimates are withheld until the comparison dates align.': 'Mapped daily TRI is not loaded for this comparison set. FundLens Alpha, Beta and tracking error remain unavailable; no proxy series is substituted.';
- $('compareRisk').innerHTML+='<div class="data-status '+(items.length<2||identityOk?'ok':'warn')+'">'+escapeHtml(identityText)+'</div><div class="metric-caption">* NAV-only Sharpe / Sortino use the current RBI long-dated G-Sec yield proxy held constant through the sample. † Official AMFI Information Ratio is a published source value; AMFI trailing returns are report-date snapshots, not daily regression inputs. '+escapeHtml(triText)+'</div>';
+ const triText=benchmarkMatchesLoadedSeries?'FundLens Alpha, Beta and tracking-error estimates use matched weekly fund NAV and TRI-derived benchmark observations. Estimates are annualised using 52 periods per year.':!sharedLatestNavDate?'The selected schemes do not share the same latest NAV date. Benchmark regression estimates are withheld until the comparison dates align.': 'Mapped weekly TRI-derived observations are not loaded for this comparison set. FundLens Alpha, Beta and tracking error remain unavailable; no proxy series is substituted.';
+ $('compareRisk').innerHTML+='<div class="data-status '+(items.length<2||identityOk?'ok':'warn')+'">'+escapeHtml(identityText)+'</div><div class="metric-caption">* NAV-only Sharpe / Sortino use the current RBI long-dated G-Sec yield proxy held constant through the sample. † Official AMFI Information Ratio is a published source value; AMFI trailing returns are report-date snapshots, not weekly regression inputs. '+escapeHtml(triText)+'</div>';
 }
 
 
