@@ -246,15 +246,18 @@ function parseNumeric(raw) {
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : NaN;
 }
-function parseWeight(cell, isPercentColumn = true) {
+function parseWeight(cell, fractionalSource = false) {
   if (!cell) return NaN;
   const raw = String(cell.value ?? "").trim();
   if (!raw) return NaN;
   const n = parseNumeric(raw);
   if (!Number.isFinite(n)) return NaN;
   const textHasPercent = /%/.test(raw);
-  const fractionStoredAsPercent = isPercentColumn && Math.abs(n) <= 1 && !Number.isInteger(n);
-  const value = textHasPercent ? n : (cell.percentStyle || fractionStoredAsPercent) ? n * 100 : n;
+  // PPFAS workbooks store percentage values as Excel fractions. HDFC stores
+  // percentage points in the cell value. Honour the cell's actual percent
+  // format first, then apply only the verified PPFAS source convention.
+  const scale = textHasPercent ? 1 : cell.percentStyle ? 100 : (fractionalSource && Math.abs(n) < 1 ? 100 : 1);
+  const value = n * scale;
   return value > 0 && value <= 100 ? value : NaN;
 }
 function isRatingOrDebtRow(name, typeOrSector) {
@@ -262,7 +265,7 @@ function isRatingOrDebtRow(name, typeOrSector) {
   const ratingLike = /^(?:CRISIL|ICRA|CARE|IND|ACUITE|BRICKWORK|SMERA|A\s*[-+]?\d|AAA|AA[+-]?|A[+-]?|BBB[+-]?|BB[+-]?|B[+-]?|SOV|SO\/VER|NOT RATED)\b/i.test(descriptor);
   return ratingLike || /\b(debenture|bond|treasury|t bill|tbill|certificate of deposit|commercial paper|cp|cd|g sec|government security|repo|reverse repo|pass through|securit|mutual fund units|etf units|gold|silver|cash|money market|warrant|preference share)\b/i.test(String(name || "") + " " + descriptor);
 }
-function parsePortfolio(buf) {
+function parsePortfolio(buf, fractionalSource = false) {
   const rows = parseXlsxRows(buf);
   let headerAt = -1, headers = [];
   for (let i = 0; i < Math.min(rows.length, 80); i++) {
@@ -286,7 +289,7 @@ function parsePortfolio(buf) {
     const name = cellValue(row, nameCol).replace(/\s+/g, " ").trim();
     const isinRaw = cellValue(row, isinCol).toUpperCase().replace(/\s+/g, "");
     const isin = /^[A-Z]{2}[A-Z0-9]{10}$/.test(isinRaw) ? isinRaw : null;
-    const weight = parseWeight(row[weightCol], true);
+    const weight = parseWeight(row[weightCol], fractionalSource);
     const sector = sectorCol >= 0 ? cellValue(row, sectorCol).replace(/\s+/g, " ").trim() : "";
     const type = typeCol >= 0 ? cellValue(row, typeCol) : "";
     if (!name || !Number.isFinite(weight) || /^(total|grand total|net assets|net current assets|sub total)$/i.test(name)) continue;
@@ -367,7 +370,7 @@ async function resolvePortfolio(scheme, debug = false) {
     }
     return { debug: true, schemeName: scheme.name, asOf, fileUrl, totalRows: rows.length, isinRows: candidates.length, candidates };
   }
-  const parsed = parsePortfolio(buf);
+  const parsed = parsePortfolio(buf, source === AMC_SOURCES.ppfas);
   const ageDays = asOf ? Math.floor((Date.now() - new Date(asOf + "T00:00:00Z").getTime()) / 86400000) : null;
   return {
     schemeCode: Number(scheme.schemeCode),
