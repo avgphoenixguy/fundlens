@@ -268,7 +268,7 @@ const seeds=[
  {code:143269,name:'Parag Parikh Liquid Fund - Direct Plan - Growth'},
  {code:154155,name:'Parag Parikh Large Cap Fund - Direct Plan - Growth'}
 ];
-const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:'',amfiPerformance:null};
+const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:'',amfiPerformance:null,amfiTer:null};
 const $=id=>document.getElementById(id);
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3200)}
 function fmtPct(v,d=2){return Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(d)+'%':'—'}
@@ -298,7 +298,7 @@ function setBenchmarkDefault(){
  const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
  const el=$('benchmarkName');
  if(el){el.value=Array.from(el.options).some(o=>o.value===name||o.text===name)?name:'';state.benchmarkName=el.value}
- state.benchmarkSeries=[];state.amfiPerformance=null;
+ state.benchmarkSeries=[];state.amfiPerformance=null;state.amfiTer=null;
  if($('benchmarkMapping'))$('benchmarkMapping').textContent='Fetching scheme benchmark from AMFI…';
  if($('benchmarkStatus')){$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='FundLens is retrieving scheme benchmark and official IR data from AMFI.'}
 }
@@ -364,7 +364,18 @@ async function loadAutomaticResearchInputs(request){
   $('benchmarkMapping').textContent=(state.benchmarkName||'No scheme benchmark mapping')+' · AMFI feed unavailable';
   amfiResult={ok:false,error:e.message};
  }
- const rfResult=await rfTask;
+ const terTask=(async()=>{
+  try{
+   const q='/api/amfi-ter?name='+encodeURIComponent(schemeName)+'&plan='+encodeURIComponent(plan);
+   const res=await fetch(q,{headers:{'Accept':'application/json'}});
+   const body=await res.json();
+   if(!res.ok)throw new Error(body.error||'AMFI TER request returned HTTP '+res.status);
+   if(!Number.isFinite(Number(body.terPct)))throw new Error('AMFI TER value is not numeric');
+   state.amfiTer=body;
+   return {ok:true,body};
+  }catch(e){state.amfiTer=null;return {ok:false,error:e.message}}
+ })();
+ const [rfResult,terResult]=await Promise.all([rfTask,terTask]);
  if(request!==state.loadRequest)return;
  let benchmarkResult={ok:false};
  const mappedName=state.amfiPerformance?.benchmark||state.benchmarkName;
@@ -398,7 +409,7 @@ async function loadAutomaticResearchInputs(request){
   benchmarkResult={ok:false,error:'No supported daily TRI connector for benchmark'};
  }
  if(request!==state.loadRequest)return;
- $('automaticDataUpdated').textContent='RBI '+(rfResult.ok?'live':'fallback')+' · AMFI '+(amfiResult.ok?'scheme data loaded':'unavailable')+' · TRI '+(benchmarkResult.ok?'loaded':'not available');
+ $('automaticDataUpdated').textContent='RBI '+(rfResult.ok?'live':'fallback')+' · AMFI '+(amfiResult.ok?'scheme data loaded':'unavailable')+' · TER '+(terResult.ok?'refreshed':'unavailable')+' · TRI '+(benchmarkResult.ok?'loaded':'not available');
  renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare();renderDisclosureLens();
 }
 function calcRelativeRolling(){
@@ -491,7 +502,7 @@ function renderDisclosureLens(){
  const aum=live&&Number.isFinite(Number(live.aumCr))?'₹'+Number(live.aumCr).toLocaleString('en-IN',{maximumFractionDigits:2})+' Cr · AMFI report '+(live.reportDate||'date not supplied'):(ref.aum||'Not supplied');
  const risk=(live&&live.riskometer)||ref.risk||'Not supplied';
  const benchmark=(live&&live.benchmark)||ref.benchmark||'Not supplied';
- const cost=ref.cost?ref.cost+' · '+ref.costLabel+' · '+ref.costDate:'Not available from the current AMFI performance feed';
+ const cost=state.amfiTer?Number(state.amfiTer.terPct).toFixed(2)+'% full TER · '+state.amfiTer.plan+' · AMFI as of '+state.amfiTer.terDate:(ref.cost?ref.cost+' · '+ref.costLabel+' · '+ref.costDate:'AMFI TER lookup unavailable for this scheme / plan');
  const officialIr=live?.informationRatio||{};
  const irText=['1Y','3Y','5Y','10Y'].map(k=>officialIr[k]!==null&&officialIr[k]!==undefined&&officialIr[k]!==''&&Number.isFinite(Number(officialIr[k]))?k+' '+Number(officialIr[k]).toFixed(3):null).filter(Boolean).join(' · ')||'Not supplied';
  const source=live?'AMFI Fund Performance API':'Curated AMC snapshot';
@@ -593,7 +604,7 @@ async function loadScheme(code){
    cached={meta:body.meta||{},data:parsed};state.cache.set(code,cached);
   }
   if(request!==state.loadRequest)return;
-  state.meta=cached.meta;state.data=cached.data;state.history=cached.data;state.amfiPerformance=null;state.range=state.data.length>1500?'3Y':'MAX';setBenchmarkDefault();updateOverview();loadAutomaticResearchInputs(request);
+  state.meta=cached.meta;state.data=cached.data;state.history=cached.data;state.amfiPerformance=null;state.amfiTer=null;state.range=state.data.length>1500?'3Y':'MAX';setBenchmarkDefault();updateOverview();loadAutomaticResearchInputs(request);
   if(state.page==='rolling')renderRolling();if(state.page==='risk')renderRisk();toast('Loaded '+state.data.length.toLocaleString('en-IN')+' NAV observations'+(state.cache.size>1?' · '+state.cache.size+' schemes cached':'')+'.');
  }catch(e){if(request!==state.loadRequest)return;$('apiState').textContent='DATA UNAVAILABLE';$('apiState').className='tag red';$('navChart').innerHTML='<div class="empty">'+e.message+'<br><a href="https://www.mfapi.in/docs/" target="_blank" rel="noopener">Check NAV API documentation ↗</a></div>';toast('Could not load this scheme. '+e.message)}
 }
