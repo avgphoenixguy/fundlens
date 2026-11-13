@@ -35,11 +35,11 @@ async function post(path,body){
 }
 function classifyCategory(text){
  const s=String(text||"").toLowerCase();
- if(/equity|large cap|mid cap|small cap|flexi cap|multi cap|value|contra|focused|elss|sectoral|thematic/.test(s))return 1;
- if(/debt|liquid|money market|gilt|duration|credit risk|corporate bond|overnight|floater|short duration|medium duration|long duration/.test(s))return 2;
  if(/hybrid|balanced advantage|aggressive hybrid|conservative hybrid|multi asset|equity savings|arbitrage/.test(s))return 3;
+ if(/debt|liquid|money market|gilt|duration|credit risk|corporate bond|overnight|floater|short duration|medium duration|long duration/.test(s))return 2;
  if(/solution|retirement|children/.test(s))return 4;
  if(/index|etf|fund of fund|fof|other/.test(s))return 5;
+ if(/equity|large cap|mid cap|small cap|flexi cap|multi cap|value|contra|focused|elss|sectoral|thematic/.test(s))return 1;
  return null;
 }
 function planSuffix(name,plan){
