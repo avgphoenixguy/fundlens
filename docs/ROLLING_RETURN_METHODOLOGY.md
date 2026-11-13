@@ -29,13 +29,13 @@ The positive-window share is a descriptive statistic of sampled historical windo
 
 ## Benchmark-relative rolling outcomes
 
-When an appropriate daily benchmark TRI has been imported, FundLens uses exact-date matched scheme NAV / TRI observations. For each eligible matched start date it:
+When the weekly TRI-derived benchmark series is available, FundLens uses exact-date-matched scheme NAV / benchmark observations. The benchmark source is weekly, so this analysis cannot create daily benchmark observations. For each eligible matched weekly start date it:
 1. Shifts by the selected calendar-month holding period.
 2. Finds the first available matched observation on or after the target date.
-3. Calculates fund CAGR and benchmark TRI CAGR over the same start and end dates.
+3. Calculates fund CAGR and benchmark CAGR over the same matched start and end dates.
 4. Records excess CAGR as fund CAGR less benchmark CAGR.
 
-The interface reports the share of matched windows where fund CAGR exceeded benchmark CAGR, median excess CAGR and the number of matched windows. At least five matched holding windows are required to show an aggregate result. These remain historical descriptive statistics, not probabilities of future outperformance.
+The interface reports the share of matched windows where fund CAGR exceeded benchmark CAGR, median excess CAGR and the number of matched windows. Five or more matched holding windows are required to show an aggregate result. When the main rolling lab uses monthly sampling, benchmark-relative starts are spaced every four weekly observations; otherwise they remain weekly. These are historical descriptive statistics, not probabilities of future outperformance. The current weekly connector is committed in GitHub but not yet verified in the paused Netlify production deployment.
 
 ## Risk metrics in other workspaces
 
