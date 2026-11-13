@@ -23,12 +23,12 @@ The product proposition is a category-aware, explainable research workspace with
 | Risk-adjusted scorecard | NAV Sharpe / Sortino; official AMFI IR; matched Alpha / Beta / calculated IR / tracking error only when daily TRI is available | RBI 10Y G-Sec proxy; AMFI official IR; daily TRI for regression metrics |
 | Category-aware lens | Distinct active equity, index / passive, debt and hybrid research priorities | Heuristic scheme classification plus user verification |
 | Automatic disclosures | AMFI AUM, Riskometer, benchmark, plan-specific official IR, trailing fund / benchmark performance, and plan-specific full TER | AMFI Fund Performance API and monthly TER workbook; curated snapshots are fallbacks |
-| Holdings overlap & exposure | Search up to five schemes, automatically retrieve supported AMC files, ISIN-matched listed-equity pairwise overlap, and hypothetical allocation-weighted security / sector exposure | PPFAS public monthly scheme workbooks; no user uploads; dated snapshots |
+| Holdings overlap & exposure | Search up to five schemes, automatically retrieve supported AMC files, ISIN-matched listed-equity pairwise overlap, and hypothetical allocation-weighted security / sector exposure | PPFAS and HDFC public monthly scheme workbooks; no user uploads; dated snapshots |
 | Comparison | Up to three scheme comparison and NAV-derived return / risk summaries | Loaded NAV histories; matching category / plan / option still matters |
 
 ## Automatic holdings module: supported scope and safeguards
 
-The prototype now has a Holdings Overlap workspace. It searches schemes through MFAPI and requests a public monthly portfolio workbook from the PPFAS Portfolio Disclosure page. PPFAS is the first implemented AMC adapter, not universal AMC coverage. The backend checks the source host and XLSX structure, requires instrument name / ISIN / weight columns, validates ISINs and weights, aggregates duplicate ISIN rows and rejects workbooks whose parsed listed-equity weight exceeds 105% of scheme NAV. Overlap uses exact ISIN matches only.
+The prototype now has a Holdings Overlap workspace. It searches schemes through MFAPI and requests a public monthly portfolio workbook from either PPFAS or HDFC Mutual Fund. The PPFAS adapter reads scheme-level XLSX files from its Portfolio Disclosure page. The HDFC adapter reads monthly scheme XLSX files from its Monthly Portfolio page. These are the first two verified AMC adapters, not universal AMC coverage. The backend checks the source host and XLSX structure, requires instrument name / ISIN / weight columns, validates ISINs and weights, aggregates duplicate ISIN rows and rejects workbooks whose parsed listed-equity weight exceeds 105% of scheme NAV. Overlap uses exact ISIN matches only.
 
 Pairwise overlap is calculated as the sum of the lower scheme NAV weight for each common ISIN. Combined security and sector exposures use hypothetical allocations among selected funds (equal-weighted by default). This does not read or claim to represent a user's Angel One portfolio. The app withholds analysis when selected disclosure dates differ by more than 45 days and flags files older than 60 days. Debt, cash, derivatives, non-equity rows and missing-ISIN lines are excluded from this equity-only calculation. Unsupported AMCs and unvalidated workbook formats remain unavailable rather than being estimated.
 
@@ -36,11 +36,11 @@ Pairwise overlap is calculated as the sum of the lower scheme NAV weight for eac
 
 The prototype does not have a production data agreement, API key or backend connection for:
 - A reliable daily benchmark TRI provider. The current NSE public endpoint returns an HTML challenge when called from the Vercel serverless environment.
-- Automatic YTM, duration, credit-quality and manager disclosures for every scheme. Holdings ingestion currently has a PPFAS adapter only; other AMC formats are not guessed. AUM, Riskometer, IR, benchmark and TER are retrieved automatically when AMFI returns a sufficiently close scheme match.
+- Automatic YTM, duration, credit-quality and manager disclosures for every scheme. Holdings ingestion currently has PPFAS and HDFC adapters; other AMC formats are not guessed. AUM, Riskometer, IR, benchmark and TER are retrieved automatically when AMFI returns a sufficiently close scheme match.
 - Automatic effective-dated mapping from scheme code to the current Tier 1 benchmark.
 - User portfolios from Angel One accounts or demat / CAS statements.
 
-AMFI scheme details and TER are retrieved automatically through cached serverless routes when matched. PPFAS month-end equity holdings are retrieved automatically from its scheme-level workbook disclosures when a matching file can be validated. The RBI G-Sec yield proxy is fetched and held constant across the selected sample. Daily Nifty TRI requests are attempted but currently blocked by NSE HTML challenge responses. Curated disclosures are dated fallbacks only.
+AMFI scheme details and TER are retrieved automatically through cached serverless routes when matched. PPFAS and HDFC month-end listed-equity holdings are retrieved automatically from their scheme-level workbook disclosures when matching files can be validated. The RBI G-Sec yield proxy is fetched and held constant across the selected sample. Daily Nifty TRI requests are attempted but currently blocked by NSE HTML challenge responses. Curated disclosures are dated fallbacks only.
 
 ## Why these gaps remain
 
@@ -88,7 +88,7 @@ That technical feasibility does not make a generic overlap module a FundLens opp
 
 ## Automatic inputs and user uploads
 
-The live UI has no upload controls. Scheme NAV is requested from MFapi.in. AMFI Fund Performance supplies benchmark mapping, AUM, Riskometer, official plan-specific IR and trailing fund / benchmark returns. AMFI monthly workbook supplies Direct / Regular full TER. The RBI current 10-year G-Sec proxy is automatically retrieved and displayed with source and date. PPFAS scheme portfolio workbooks are automatically requested for supported schemes and processed using exact ISINs. The current NSE TRI endpoint is blocked from the serverless environment, so daily benchmark ratios are not populated until an approved TRI feed is available.
+The live UI has no upload controls. Scheme NAV is requested from MFapi.in. AMFI Fund Performance supplies benchmark mapping, AUM, Riskometer, official plan-specific IR and trailing fund / benchmark returns. AMFI monthly workbook supplies Direct / Regular full TER. The RBI current 10-year G-Sec proxy is automatically retrieved and displayed with source and date. PPFAS and HDFC scheme portfolio workbooks are automatically requested for supported schemes and processed using exact ISINs. The current NSE TRI endpoint is blocked from the serverless environment, so daily benchmark ratios are not populated until an approved TRI feed is available.
 
 
 ## Automatic-source smoke tests
