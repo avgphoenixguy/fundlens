@@ -10,7 +10,7 @@ FundLens fetches scheme NAV observations through MFapi.in. Daily simple return i
 The history belongs to the scheme code / plan / option returned by the scheme directory. Confirm the exact Direct / Regular plan and Growth / IDCW option in the scheme name and current scheme documents. IDCW distributions are not reinvested by a plain NAV-only Growth-style calculation; use a compatible total-return series if analysing distributed options.
 
 ### Benchmark returns
-Benchmark-relative measures require a daily Total Returns Index series for the exact benchmark identified in the latest SID / factsheet. The benchmark selector and imported file must refer to the same index. FundLens parses a date column and a TRI value column, sorts observations and removes duplicate dates. It then joins fund NAV and TRI on exact dates only. It does not forward-fill, interpolate, or substitute a price-index close.
+Benchmark-relative measures require a daily Total Returns Index series for the exact benchmark identified in the latest SID / factsheet. For supported Nifty indices, FundLens retrieves the TRI automatically through a cached serverless route. The scheme's stored benchmark mapping determines the index request. The response is sorted, duplicate dates are removed, and fund NAV / TRI observations are joined on exact dates only. The app does not forward-fill, interpolate, or substitute a price-index close. CRISIL and schemes without a verified stored mapping are not automatically mapped.
 
 A minimum of 30 matched return observations is a software display threshold, not a claim that 30 days is enough for robust inference. Multi-year, like-for-like periods are preferable. Both scheme and benchmark must be observed on the same dates.
 
@@ -22,7 +22,7 @@ For non-Nifty benchmarks, use the official index provider and verify the benchma
 
 ## 2. Period and daily assumptions
 
-The Advanced workspace lets the user choose an analysis period (1Y, 3Y, 5Y, 10Y or maximum available) and an annual risk-free-rate assumption. The selected analysis period is anchored to the latest available date in the NAV series. If the scheme does not have enough observations to cover the selected period, period-dependent metrics are suppressed.
+The Advanced workspace lets the user choose an analysis period (1Y, 3Y, 5Y, 10Y or maximum available) and the automatically retrieved RBI long-dated G-Sec yield proxy. The selected analysis period is anchored to the latest available date in the NAV series. If the scheme does not have enough observations to cover the selected period, period-dependent metrics are suppressed.
 
 The app automatically fetches the RBI Current Rates Government Securities Market table and uses the yield on the long-dated Government of India security closest to 10 years to maturity as its risk-free proxy. As observed on 12 November 2026, the RBI page showed 7.2178% for 6.94% GS 2036, with the yield dated 11 November 2026. The automatic route refreshes this value and displays the actual security and as-of date. If the RBI fetch fails, the app uses the 7.2178% observation from 11 November 2026 as a dated fallback and labels it as such.
 
@@ -33,7 +33,7 @@ The current yield is converted to a simple daily approximation by dividing by 25
 Let:
 - `r_f,t` = daily arithmetic scheme NAV return
 - `r_b,t` = daily arithmetic benchmark TRI return
-- `r_0` = annual user-entered risk-free rate divided by 252
+- `r_0` = current RBI long-dated G-Sec yield proxy divided by 252
 - `N = 252` = annualisation convention
 
 ### Annualised volatility
@@ -42,10 +42,10 @@ Sample standard deviation of daily scheme returns × `√252`.
 ### Sharpe ratio
 `mean(r_f,t - r_0) / sample_sd(r_f,t) × √252`.
 
-This is a NAV-derived estimate based on the visible risk-free assumption. It is not necessarily the same as an AMC factsheet Sharpe, which may use another period, frequency or risk-free proxy.
+This is a NAV-derived estimate based on the RBI G-Sec yield proxy displayed in Advanced view. It is not necessarily the same as an AMC factsheet Sharpe, which may use another period, frequency or risk-free proxy.
 
 ### Sortino ratio
-`mean(r_f,t - r_0) / downside_deviation × √252`, where downside deviation is the root mean square of the negative daily deviations below the selected target rate. In the current UI, the same annual rate input is used as the risk-free / downside target assumption. It should not be interpreted as a universal target return.
+`mean(r_f,t - r_0) / downside_deviation × √252`, where downside deviation is the root mean square of the negative daily deviations below the selected target rate. In the current UI, the same automatically fetched annual G-Sec yield proxy is used as the risk-free / downside target assumption. It should not be interpreted as a universal target return.
 
 ### Beta
 For exact-date-matched daily fund and benchmark returns:
