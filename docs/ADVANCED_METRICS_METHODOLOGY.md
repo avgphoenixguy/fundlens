@@ -10,32 +10,42 @@ FundLens fetches scheme NAV observations through MFapi.in. Daily simple return i
 The history belongs to the scheme code / plan / option returned by the scheme directory. Confirm the exact Direct / Regular plan and Growth / IDCW option in the scheme name and current scheme documents. IDCW distributions are not reinvested by a plain NAV-only Growth-style calculation; use a compatible total-return series if analysing distributed options.
 
 ### Benchmark returns
-Benchmark-relative measures require a daily Total Returns Index series for the exact benchmark identified in the latest SID / factsheet. For supported Nifty indices, FundLens retrieves the TRI automatically through a cached serverless route. The scheme's stored benchmark mapping determines the index request. The response is sorted, duplicate dates are removed, and fund NAV / TRI observations are joined on exact dates only. The app does not forward-fill, interpolate, or substitute a price-index close. CRISIL and schemes without a verified stored mapping are not automatically mapped.
+Benchmark-relative measures require the correct total-return index for the benchmark named in the latest SID / factsheet. For supported Nifty indices, FundLens requests the published weekly series from Tipsheet's indices/p data family. Tipsheet documents these as the weekly series used by its NSE index pages. Its public data catalogue describes the JSON series shape as ISO dates, a series map, a resolution and metadata describing source and method.
 
-A minimum of 30 matched return observations is a software display threshold, not a claim that 30 days is enough for robust inference. Multi-year, like-for-like periods are preferable. Both scheme and benchmark must be observed on the same dates.
+The observed compact series keys include tr (Total Return), pr (Price Return), dd, vol, r3 and r5. FundLens selects only tr and explicitly excludes pr and the other chart statistics. The connector validates weekly observation spacing and returns a rebased growth-of-100 curve, not raw NSE index levels. Tipsheet's published method identifies NSE Indices TRI with dividends reinvested as the underlying source and documents repairs of identified anomalous TRI prints against the corresponding price index. This source-level repair must not be confused with substituting a price-return series.
 
-NSE Indices provides historical Total Returns Index Values reports. TRI includes constituent dividends reinvested into the index and is the correct index concept for comparison with total fund returns. See:
+The scheme's AMFI benchmark mapping determines the requested index. The response is sorted, duplicate dates are removed, and fund NAV / benchmark observations are joined on exact dates only. FundLens does not forward-fill, interpolate or replace a missing TRI observation with a price-index value. CRISIL and schemes without a verified Nifty mapping are not automatically mapped.
+
+A minimum of 30 matched weekly return observations is a software display threshold, not a claim that 30 weeks is enough for robust inference. Multi-year, like-for-like periods are preferable. Both scheme and benchmark must be observed on the same dates. The current GitHub connector has been updated for the published series schema, but the latest Netlify production deployment has not yet been verified; benchmark calculations remain unavailable until validated weekly observations are loaded.
+
+Sources:
+- [Tipsheet public data catalogue](https://tipsheet.markets/data/)
+- [Tipsheet index-page method and weekly series description](https://tipsheet.markets/methods/index_pages/)
+- [Tipsheet TRI repair method](https://tipsheet.markets/methods/indices/)
 - [NSE Indices historical data reports](https://www.niftyindices.com/reports/historical-data)
 - [NSE Total Returns Index explanation](https://www.nseindia.com/static/products-services/indices-total-returns-index)
 
-For non-Nifty benchmarks, use the official index provider and verify the benchmark named in the latest scheme SID / factsheet.
+For non-Nifty benchmarks, use the official index provider and verify the benchmark named in the latest scheme SID / factsheet. No Tipsheet model index is used as a fund benchmark.
 
-## 2. Period and daily assumptions
+## 2. Period and frequency assumptions
 
 The Advanced workspace lets the user choose an analysis period (1Y, 3Y, 5Y, 10Y or maximum available) and the automatically retrieved RBI long-dated G-Sec yield proxy. The selected analysis period is anchored to the latest available date in the NAV series. If the scheme does not have enough observations to cover the selected period, period-dependent metrics are suppressed.
 
 The app automatically fetches the RBI Current Rates Government Securities Market page and uses the yield on the long-dated Government of India security closest to 10 years to maturity as its risk-free proxy. On 13 November 2026, the live RBI page retrieved by the FundLens serverless function returned 7.2430% for 6.94% GS 2036, with the yield dated 12 November 2026. The app displays the security, rate, source and observation date. If live retrieval fails, the app uses a separately labelled fallback snapshot of 7.2178% dated 11 November 2026.
 
 
-The current yield is converted to a simple daily approximation by dividing by 252 and is held constant across the selected historical NAV window. This is a transparent simplifying assumption, not a true historical daily risk-free time series. It is used both as the excess-return rate in Sharpe / Alpha and as the downside target in Sortino. A duration-matched short-term sovereign series would be methodologically preferable for some debt-fund categories; this prototype deliberately uses the requested long-dated sovereign proxy consistently.
+For daily NAV-only calculations, the current annual yield is converted to an effective daily rate using (1 + annual_yield)^(1/252) - 1 and held constant across the selected historical NAV window. This is a simplifying assumption, not a true historical daily risk-free time series. Sharpe and Sortino use the daily equivalent. For weekly benchmark regression, the same annual yield is converted to an effective weekly rate using (1 + annual_yield)^(1/52) - 1. A duration-matched short-term sovereign series would be methodologically preferable for some debt-fund categories; this prototype deliberately uses the requested long-dated sovereign proxy consistently.
 
 ## 3. Metrics
 
 Let:
-- `r_f,t` = daily arithmetic scheme NAV return
-- `r_b,t` = daily arithmetic benchmark TRI return
-- `r_0` = current RBI long-dated G-Sec yield proxy divided by 252
-- `N = 252` = annualisation convention
+- `r_f,t` = daily arithmetic scheme NAV return for NAV-only risk measures
+- `r_f,w` = weekly arithmetic scheme NAV return on an exact benchmark observation date
+- `r_b,w` = weekly arithmetic return of the TRI-derived benchmark series
+- `r_0,d` = effective daily equivalent of the current RBI long-dated G-Sec yield proxy
+- `r_0,w` = effective weekly equivalent of the same annual yield proxy
+- `N_d = 252` = annualisation convention for daily NAV-only measures
+- `N_w = 52` = annualisation convention for weekly benchmark-relative measures
 
 ### Annualised volatility
 Sample standard deviation of daily scheme returns × `√252`.
@@ -49,30 +59,30 @@ This is a NAV-derived estimate based on the RBI G-Sec yield proxy displayed in A
 `mean(r_f,t - r_0) / downside_deviation × √252`, where downside deviation is the root mean square of the negative daily deviations below the selected target rate. In the current UI, the same automatically fetched annual G-Sec yield proxy is used as the risk-free / downside target assumption. It should not be interpreted as a universal target return.
 
 ### Beta
-For exact-date-matched daily fund and benchmark returns:
+For exact-date-matched weekly fund and benchmark returns:
 
-`Cov_sample(r_f, r_b) / Var_sample(r_b)`.
+`Cov_sample(r_f,w, r_b,w) / Var_sample(r_b,w)`.
 
 ### Alpha
-Annualised daily CAPM intercept:
+Annualised weekly CAPM intercept:
 
-`252 × [mean(r_f) - r_0 - Beta × (mean(r_b) - r_0)]`.
+`52 × [mean(r_f,w) - r_0,w - Beta × (mean(r_b,w) - r_0,w)]`.
 
 Alpha is an estimate that is sensitive to benchmark choice, sample period and assumptions. It is not a guarantee of manager skill.
 
 ### Tracking error
-Sample standard deviation of daily active return `(r_f - r_b)` × `√252`.
+Sample standard deviation of weekly active return `(r_f,w - r_b,w)` × `√52`.
 
 ### Information Ratio
 
-For equity-oriented schemes, FundLens displays an **annualised research estimate**:
+For equity-oriented schemes, FundLens displays an **annualised weekly research estimate** when matched weekly data is available:
 
-mean(daily arithmetic active return) / sample_sd(daily arithmetic active return) × √252.
+mean(weekly arithmetic active return) / sample_sd(weekly arithmetic active return) × √52.
 
-The √252 factor annualises the daily ratio using the same 252-observation convention used for daily volatility and tracking error. SEBI Circular SEBI/HO/IMD/IMD-PoD-2/P/CIR/2025/6 (17 January 2025) specifies the portfolio-minus-Tier-1-benchmark excess-return formula, requires daily return values and arithmetic daily portfolio returns, but the circular's formula text does not itself state an annualisation multiplier. AMFI's explanatory illustration annualises the numerator / denominator using the observation frequency. Therefore FundLens labels its result as an annualised research estimate, not as the AMC / AMFI regulatory disclosure. For a regulatory or factsheet comparison, use the scheme's official published IR and methodology / period.
+This is a FundLens estimate, not the AMC / AMFI regulatory disclosure. The official AMFI Information Ratio is displayed separately when its plan-specific value is supplied. The weekly estimate must not be treated as interchangeable with an official scheme-published IR that may use a different period, benchmark convention or methodology.
 
 ### Benchmark CAGR / excess CAGR
-Fund and benchmark CAGR are calculated across the same first and last matched NAV / TRI observations. Excess CAGR is fund CAGR less benchmark CAGR over those dates.
+Fund and benchmark CAGR are calculated across the same first and last exact-date-matched weekly NAV / TRI-derived observations. CAGR uses actual elapsed calendar time between those observations. Excess CAGR is fund CAGR less benchmark CAGR over the same dates.
 
 ## 4. Benchmark-relative rolling outcomes
 
@@ -106,10 +116,10 @@ The UTI sample register, for example, warns that reported return data is Regular
 
 ## 7. Limitations and production requirements
 
-The AMFI Fund Performance API supplies scheme-specific benchmark names, AUM, Riskometer, official plan-specific IR and trailing scheme / benchmark performance when a scheme-name match is found. The AMFI monthly TER workbook supplies plan-specific full TER when a matching record is available. The app does not have automatic YTM, duration, credit-quality or holdings integration. The current NSE TRI serverless request is blocked by HTML challenge responses, so daily benchmark-dependent Alpha / Beta / tracking metrics remain unavailable until a supported feed is connected.
+The AMFI Fund Performance API supplies scheme-specific benchmark names, AUM, Riskometer, official plan-specific IR and trailing scheme / benchmark performance when a scheme-name match is found. The AMFI monthly TER workbook supplies plan-specific full TER when a matching record is available. The app does not have automatic YTM, duration or credit-quality integration for every scheme. The benchmark connector now targets Tipsheet's published weekly NSE TRI-derived series, selecting only tr and excluding pr; the latest parser is committed in GitHub but has not yet been verified in the paused Netlify production deployment. Weekly benchmark-dependent Alpha / Beta / calculated IR / tracking error remain unavailable until validated weekly observations are loaded.
 
 A production build should:
-1. Connect approved benchmark and disclosure feeds with usage rights.
+1. Verify the weekly Tipsheet / NSE TRI-derived connector end-to-end after deployment, and confirm data-use and index licensing rights before any commercial use.
 2. Maintain scheme-code / plan / option and benchmark mappings with effective dates.
 3. Validate TRI data type, index name, base history, duplicate dates and missing observations.
 4. Record source URL, download date, disclosure date, observation window, formula version and data hash for each calculation.
