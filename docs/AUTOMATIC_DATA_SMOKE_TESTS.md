@@ -43,7 +43,7 @@ This is a holdings overlap measure, not correlation, diversification quality or 
 - The earlier direct NSE historical-data route returned HTML challenge responses and was retired.
 - The replacement GitHub implementation reads Tipsheet's published weekly NSE TRI-derived dataset for supported Nifty indices. The connector selects only tr (Total Return), excludes pr (Price Return), validates weekly spacing and matches benchmark observations to NAV dates exactly.
 - A local parser test selected tr from a representative nested dataset shape. This is a parser test, not a live upstream integration test.
-- The latest Netlify deployment containing the parser fix was skipped because the account had exhausted its available deployment credits. The live production endpoint has therefore not been verified with the latest code. Until that deployment is available and returns validated weekly observations, benchmark-dependent FundLens Alpha, Beta, calculated IR, tracking error and benchmark-relative rolling metrics must remain unavailable.
+- The benchmark parser is present in the repository and is routed through the Cloudflare Worker entry point. Benchmark-dependent Alpha, Beta, calculated IR, tracking error and relative rolling metrics remain conditional on a live `/api/benchmark` response containing validated weekly observations and sufficient exact-date NAV matches.
 - No price-return series, Tipsheet model index, fabricated value or synthetic benchmark is permitted as a fallback.
 
 ## Scope and known limitations
@@ -67,3 +67,29 @@ Use the preview build for branch `feat/automatic-portfolio-holdings` and call th
 - `/api/holdings?schemeCode=148958` (PPFAS Conservative Hybrid Direct Growth)
 - `/api/holdings?schemeCode=143269` (PPFAS Liquid Direct Growth, expected no-equity response)
 - Append `&refresh=1` to bypass edge caching for a source refresh.
+
+
+## Cloudflare Workers deployment
+
+**Canonical URL:** https://fundlens.krishnalahoti2004.workers.dev/
+
+The repository now includes `wrangler.jsonc` and `cloudflare/worker.js`. The Worker serves the static `index.html` asset and dispatches these routes to the existing API handlers:
+
+- `/api/health`
+- `/api/risk-free-rate`
+- `/api/amfi-performance`
+- `/api/amfi-ter`
+- `/api/benchmark`
+- `/api/holdings`
+
+This audit could not fetch the supplied `workers.dev` hostname from its current network environment. Therefore, the historical Vercel preview tests above are not treated as production verification for Cloudflare.
+
+### Post-deployment checks
+
+1. Open `/api/health` and confirm the response lists all five data routes.
+2. Confirm `/api/risk-free-rate` returns a dated RBI observation and inspect `isFallback`.
+3. Request `/api/benchmark?index=NIFTY%2050&start=2023-01-01&end=2026-11-13`; verify a weekly response and a non-zero observation count.
+4. Request `/api/holdings?schemeCode=122639` and `/api/holdings?schemeCode=118955`; verify both return HTTP 200 and comparable disclosure dates.
+5. In Holdings Overlap, add those two supported Direct Growth schemes, keep both hypothetical allocations above zero, and calculate. The pairwise heatmap should show the two off-diagonal overlap cells (same value in both directions), and the sector donut should show the allocation-weighted classified-equity mix. Existing tables should remain visible below the charts.
+
+The charts depend on validated holdings, exact ISIN matching, disclosure dates within 45 days and positive allocation weights. If those conditions fail, FundLens intentionally withholds the combined charts instead of inventing or silently renormalising data.
