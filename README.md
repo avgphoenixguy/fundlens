@@ -32,7 +32,7 @@ A methodology-first workspace that exposes:
 - **Fund universe:** search scheme names and AMCs using the MFapi.in scheme directory.
 - **Overview:** selected scheme metadata, NAV-based trailing returns, investment growth and historical drawdown.
 - **Rolling lab:** configurable 1–120 month holding windows, daily / weekly / monthly start-date sampling, absolute or annualised returns, rolling outcome chart and histogram.
-- **Compare funds:** compare up to three schemes with NAV-derived return / risk measures. This is a descriptive research comparison, not a universal ranking.
+- **Compare funds:** compare up to three schemes without a restrictive like-for-like eligibility gate. The table shows each scheme's NAV-derived return / risk measures and its own AMFI disclosures. Benchmark-regression estimates are withheld when the selected schemes do not share a validated benchmark series or aligned NAV dates. This is a descriptive research comparison, not a universal ranking.
 - **Risk profile:** annualised volatility, maximum drawdown, positive-day share and daily-return distribution.
 - **Advanced research:** automatic AMFI disclosures, automatic RBI risk-free proxy, metric definitions, data dates and category-specific research lenses.
 - **Holdings overlap & exposure:** search up to five Direct Growth schemes, automatically retrieve supported public AMC holdings workbooks, compare listed-equity positions by ISIN, inspect pairwise overlap in a fund-by-fund heatmap, and view hypothetical allocation-weighted sector exposure in a donut chart. Existing pairwise and security-level tables remain available for detail.
