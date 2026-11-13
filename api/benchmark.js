@@ -144,35 +144,44 @@ async function getTipsheetManifest() {
   return manifestPending;
 }
 
-function collectSeries(node, path, inheritedMeta, out, depth) {
-  if (depth > 8 || node == null || typeof node !== "object") return;
+function collectSeries(node, path, inheritedMeta, inheritedDates, inheritedResolution, out, depth) {
+  if (depth > 10 || node == null || typeof node !== "object") return;
   if (Array.isArray(node)) {
-    node.forEach((item, i) => collectSeries(item, path.concat(String(i)), inheritedMeta, out, depth + 1));
+    node.forEach((item, i) => collectSeries(item, path.concat(String(i)), inheritedMeta, inheritedDates, inheritedResolution, out, depth + 1));
     return;
   }
-  const meta = node.meta && typeof node.meta === "object" ? { ...inheritedMeta, ...node.meta } : inheritedMeta;
-  if (Array.isArray(node.dates) && node.series && typeof node.series === "object" && !Array.isArray(node.series)) {
+
+  const meta = node.meta && typeof node.meta === "object"
+    ? { ...inheritedMeta, ...node.meta }
+    : inheritedMeta;
+  const dates = Array.isArray(node.dates) ? node.dates : inheritedDates;
+  const resolution = node.resolution || node.frequency ||
+    (meta && (meta.resolution || meta.frequency)) || inheritedResolution || null;
+
+  // Some published chart bundles put the shared date vector on a parent
+  // object and nest the named series below it. Carry dates/resolution down.
+  if (node.series && typeof node.series === "object" && !Array.isArray(node.series)) {
     for (const [seriesName, values] of Object.entries(node.series)) {
-      if (Array.isArray(values) && values.length === node.dates.length) {
-        const rawLabel = String(seriesName || "").trim();
-        const isPrice = /price|capital gain|price return/i.test(rawLabel) || /^pr$/i.test(rawLabel);
-        const isTotalReturn = /total[ _-]*return|\\btri\\b/i.test(rawLabel) || /^tr$/i.test(rawLabel);
-        if (isTotalReturn && !isPrice) {
-          out.push({
-            path: path.join("/"),
-            label: /^tr$/i.test(rawLabel) ? "Total Return (TR)" : rawLabel,
-            dates: node.dates,
-            values,
-            meta,
-            resolution: node.resolution || node.frequency || meta.resolution || meta.frequency || null
-          });
-        }
+      if (!Array.isArray(values) || !Array.isArray(dates) || values.length !== dates.length) continue;
+      const rawLabel = String(seriesName || "").trim();
+      const isPrice = /price|capital gain|price return/i.test(rawLabel) || /^pr$/i.test(rawLabel);
+      const isTotalReturn = /total[ _-]*return|\btri\b/i.test(rawLabel) || /^tr$/i.test(rawLabel);
+      if (isTotalReturn && !isPrice) {
+        out.push({
+          path: path.join("/"),
+          label: /^tr$/i.test(rawLabel) ? "Total Return (TR)" : rawLabel,
+          dates,
+          values,
+          meta,
+          resolution
+        });
       }
     }
   }
+
   for (const [key, value] of Object.entries(node)) {
-    if (key === "meta") continue;
-    collectSeries(value, path.concat(key), meta, out, depth + 1);
+    if (key === "meta" || key === "dates" || key === "series") continue;
+    collectSeries(value, path.concat(key), meta, dates, resolution, out, depth + 1);
   }
 }
 function median(values) {
@@ -197,7 +206,7 @@ function verifyWeekly(dates) {
 }
 function pickTotalReturnSeries(dataset) {
   const candidates = [];
-  collectSeries(dataset, [], dataset.meta || {}, candidates, 0);
+  collectSeries(dataset, [], dataset.meta || {}, null, null, candidates, 0);
   if (!candidates.length) {
     const seriesNames = [];
     function listNames(node, depth) {
