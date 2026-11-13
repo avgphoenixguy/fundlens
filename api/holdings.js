@@ -232,34 +232,38 @@ function parseNumeric(raw) {
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : NaN;
 }
-function parseWeight(cell) {
+function parseWeight(cell, isPercentColumn = true) {
   if (!cell) return NaN;
   const raw = String(cell.value ?? "").trim();
   if (!raw) return NaN;
   const n = parseNumeric(raw);
   if (!Number.isFinite(n)) return NaN;
   const textHasPercent = /%/.test(raw);
-  const value = textHasPercent ? n : cell.percentStyle ? n * 100 : n;
+  const fractionStoredAsPercent = isPercentColumn && Math.abs(n) <= 1 && !Number.isInteger(n);
+  const value = textHasPercent ? n : (cell.percentStyle || fractionStoredAsPercent) ? n * 100 : n;
   return value > 0 && value <= 100 ? value : NaN;
 }
-function isDebtLike(name, type) {
-  return /\b(debenture|bond|treasury|t bill|tbill|certificate of deposit|commercial paper|cp|cd|g sec|government security|repo|reverse repo|pass through|securit|mutual fund units|etf units|gold|silver|cash|money market)\b/i.test(name + " " + type);
+function isRatingOrDebtRow(name, typeOrSector) {
+  const descriptor = String(typeOrSector || "").trim();
+  const ratingLike = /^(?:CRISIL|ICRA|CARE|IND|ACUITE|BRICKWORK|SMERA|A\s*[-+]?\d|AAA|AA[+-]?|A[+-]?|BBB[+-]?|BB[+-]?|B[+-]?|SOV|SO\/VER|NOT RATED)\b/i.test(descriptor);
+  return ratingLike || /\b(debenture|bond|treasury|t bill|tbill|certificate of deposit|commercial paper|cp|cd|g sec|government security|repo|reverse repo|pass through|securit|mutual fund units|etf units|gold|silver|cash|money market|warrant|preference share)\b/i.test(String(name || "") + " " + descriptor);
 }
 function parsePortfolio(buf) {
   const rows = parseXlsxRows(buf);
   let headerAt = -1, headers = [];
-  for (let i = 0; i < Math.min(rows.length, 60); i++) {
-    const values = rows[i].map(c => c?.value || "");
-    const hasIsin = values.some(v => /\bisin\b/i.test(String(v)));
-    const hasName = values.some(v => /instrument|security|company|issuer|stock|scrip|particulars|name of/i.test(String(v)));
-    const hasWeight = values.some(v => /%\s*(to|of)\s*(nav|net assets)|weight|portfolio\s*%|net assets\s*%/i.test(String(v)));
+  for (let i = 0; i < Math.min(rows.length, 80); i++) {
+    const values = rows[i].map(c => String(c?.value || "").replace(/\s+/g, " ").trim());
+    const normalized = values.map(headerNorm);
+    const hasIsin = normalized.some(v => v === "isin" || v.startsWith("isin "));
+    const hasName = normalized.some(v => /instrument|security|company|issuer|stock|scrip|particulars|name of/.test(v));
+    const hasWeight = normalized.some(v => /^(to nav|to net assets|percentage to nav|weight|portfolio weight|net assets)$/.test(v));
     if (hasIsin && hasName && hasWeight) { headerAt = i; headers = values; break; }
   }
-  if (headerAt < 0) throw new Error("Workbook layout could not be validated: expected instrument name, ISIN and portfolio-weight columns");
+  if (headerAt < 0) throw new Error("Workbook layout could not be validated: expected instrument name, ISIN and % to NAV columns");
   const nameCol = findHeader(headers, h => /^(name of the instrument|name of instrument|instrument name|security name|company name|issuer name|scrip name|stock name|particulars|name)$/.test(h) || /^(name of the instrument|instrument name|security description)/.test(h));
   const isinCol = findHeader(headers, h => h === "isin" || h === "isin no" || h === "isin number" || h.startsWith("isin "));
-  const weightCol = findHeader(headers, h => /%.*(to|of).*(nav|net assets)|percentage to nav|weight|portfolio %|net assets %/.test(h));
-  const sectorCol = findHeader(headers, h => /^(industry|sector|industry name|sector name)$/.test(h));
+  const weightCol = findHeader(headers, h => /^(to nav|to net assets|percentage to nav|weight|portfolio weight|net assets)$/.test(h));
+  const sectorCol = findHeader(headers, h => /^(industry|sector|industry name|sector name|industry rating)$/.test(h));
   const typeCol = findHeader(headers, h => /^(asset class|instrument type|security type|type)$/.test(h));
   if (nameCol < 0 || isinCol < 0 || weightCol < 0) throw new Error("Workbook columns are not sufficiently explicit to calculate holdings overlap");
   const holdings = [];
@@ -268,21 +272,19 @@ function parsePortfolio(buf) {
     const name = cellValue(row, nameCol).replace(/\s+/g, " ").trim();
     const isinRaw = cellValue(row, isinCol).toUpperCase().replace(/\s+/g, "");
     const isin = /^[A-Z]{2}[A-Z0-9]{10}$/.test(isinRaw) ? isinRaw : null;
-    const weightCell = row[weightCol];
-    const weight = parseWeight(weightCell);
-    const sector = sectorCol >= 0 ? cellValue(row, sectorCol) : "";
+    const weight = parseWeight(row[weightCol], true);
+    const sector = sectorCol >= 0 ? cellValue(row, sectorCol).replace(/\s+/g, " ").trim() : "";
     const type = typeCol >= 0 ? cellValue(row, typeCol) : "";
-    if (!name || !Number.isFinite(weight) || /^(total|grand total|net assets|net current assets)$/i.test(name)) continue;
+    if (!name || !Number.isFinite(weight) || /^(total|grand total|net assets|net current assets|sub total)$/i.test(name)) continue;
     const equityHint = /\b(equity|shares|stock|listed equity)\b/i.test(type);
-    const debtHint = isDebtLike(name, type);
+    const debtHint = isRatingOrDebtRow(name, type + " " + sector);
     const equityByIndustry = !!sector && !!isin && isin.startsWith("INE") && !debtHint;
-    // Security identity must be a validated ISIN. Never use fuzzy company-name keys for overlap.
     if (!(equityHint || equityByIndustry) || debtHint || !isin) { excluded++; continue; }
     holdings.push({
       name, isin, key: isin,
       weightPct: weight,
       sector: sector || "Sector not disclosed",
-      instrumentType: type || "Equity (inferred from disclosure columns)"
+      instrumentType: type || "Equity (inferred from AMC industry field)"
     });
   }
   const deduped = new Map();
@@ -357,7 +359,7 @@ async function resolvePortfolio(scheme, debug = false) {
     sourceFile: fileUrl,
     asOf,
     ageDays: Number.isFinite(ageDays) ? ageDays : null,
-    stale: !Number.isFinite(ageDays) || ageDays > 60,
+    stale: !Number.isFinite(ageDays) || ageDays > 45,
     retrievedAt: new Date().toISOString(),
     holdings: parsed.holdings,
     equityCoveragePct: Number(parsed.equityCoveragePct.toFixed(4)),
