@@ -60,6 +60,7 @@
   <button class="nav-btn" data-page="universe"><span class="nav-icon">⌕</span><span class="nav-text">Fund universe</span></button>
   <button class="nav-btn" data-page="rolling"><span class="nav-icon">⌁</span><span class="nav-text">Rolling lab</span></button>
   <button class="nav-btn" data-page="compare"><span class="nav-icon">▥</span><span class="nav-text">Compare funds</span></button>
+  <button class="nav-btn" data-page="overlap"><span class="nav-icon">◫</span><span class="nav-text">Portfolio overlap</span></button>
   <div class="side-label" style="margin-top:14px">ANALYSIS</div>
   <button class="nav-btn" data-page="risk"><span class="nav-icon">◒</span><span class="nav-text">Risk profile</span></button>
   <div class="side-foot"><b>Data transparency</b>Historical NAVs power the return calculations. Metrics are computed from the visible observations, and the methodology is shown beside the output.</div>
@@ -252,6 +253,58 @@
    </div>
    <div class="warning-box">Volatility and drawdown are calculated from the scheme's NAV series only. They do not describe all risks, including liquidity, credit, concentration, interest-rate or tracking risk. Debt and hybrid funds require category-specific measures.</div>
   </section>
+
+  <section class="panel" id="page-overlap">
+   <div class="page-head"><div><div class="eyebrow">PORTFOLIO LOOK-THROUGH</div><h1>Find duplication across your mutual funds.</h1><p>Upload two or more dated AMC holdings disclosures to see shared stocks, overlapping weights and your blended portfolio concentration.</p></div><span class="tag green">HOLDINGS-BASED ANALYSIS</span></div>
+   <div class="panel-box">
+    <div class="panel-heading"><div><h3>1. Import scheme holdings</h3><p>Use one combined CSV containing holdings for multiple schemes. Prefer ISIN as the security identifier.</p></div><span class="tag">CSV IMPORT</span></div>
+    <div class="input-row" style="grid-template-columns:1.5fr 1fr .8fr">
+     <div class="input-field"><label>Combined holdings CSV</label><input class="file-input" type="file" id="overlapFile" accept=".csv,.txt"></div>
+     <div class="input-field"><label>Expected columns</label><div class="data-status">SchemeName, Security, ISIN, Sector, WeightPct, DisclosureDate</div></div>
+     <div class="input-field"><label>Template</label><button class="btn" id="downloadOverlapTemplate" type="button">Download CSV template</button></div>
+    </div>
+    <div id="overlapUploadStatus" class="data-status warn" style="margin-top:10px">No multi-scheme holdings file loaded. This workspace does not infer holdings from NAV data.</div>
+    <div class="metric-caption">Source your holdings from the latest monthly AMC / AMFI scheme portfolio disclosure. Do not combine different disclosure dates without checking the date warning. The uploaded file is parsed locally in this browser session.</div>
+   </div>
+   <div class="panel-box" id="overlapAllocationPanel">
+    <div class="panel-heading"><div><h3>2. Set how much you invest in each scheme</h3><p>These amounts determine the blended stock and sector exposures. Defaults are equal allocations and can be edited.</p></div><span class="tag">INVESTOR INPUT</span></div>
+    <div class="table-scroll"><table><thead><tr><th>Scheme</th><th>Disclosure date</th><th>Reported holding weight</th><th>Investment amount (₹)</th></tr></thead><tbody id="overlapAllocationRows"><tr><td colspan="4" class="muted">Upload holdings for at least one scheme.</td></tr></tbody></table></div>
+   </div>
+   <div class="metric-grid" id="overlapKpis">
+    <div class="metric-card"><div class="m-label">Schemes analysed</div><div class="m-value">—</div><div class="m-note">Upload multiple schemes</div></div>
+    <div class="metric-card"><div class="m-label">Unique securities</div><div class="m-value">—</div><div class="m-note">Matched by ISIN or normalised name</div></div>
+    <div class="metric-card"><div class="m-label">Top 10 stock exposure</div><div class="m-value">—</div><div class="m-note">Weighted by your allocation amounts</div></div>
+    <div class="metric-card"><div class="m-label">Largest sector</div><div class="m-value">—</div><div class="m-note">Look-through exposure</div></div>
+   </div>
+   <div class="grid two section-gap">
+    <div class="panel-box">
+     <div class="panel-heading"><div><h3>3. Fund-to-fund overlap matrix</h3><p>Pairwise overlap = sum of the lower reported weight for every shared security.</p></div><span class="tag">POSITION OVERLAP</span></div>
+     <div class="table-scroll"><table><thead id="overlapMatrixHead"><tr><th>Scheme A</th><th>Scheme B</th><th>Overlap</th><th>Shared securities</th></tr></thead><tbody id="overlapMatrixBody"><tr><td colspan="4" class="muted">Upload at least two schemes to calculate overlap.</td></tr></tbody></table></div>
+     <div class="metric-caption">This is a holdings-weight overlap measure, not correlation or a diversification score. If holdings disclosures omit cash, derivatives or other assets, the calculated overlap may understate the full portfolio overlap.</div>
+    </div>
+    <div class="panel-box">
+     <div class="panel-heading"><div><h3>Repeated positions across schemes</h3><p>Stocks held by two or more uploaded funds, ranked by blended portfolio exposure.</p></div></div>
+     <div class="table-scroll"><table><thead><tr><th>Security</th><th>Funds holding it</th><th>Blended weight</th><th>Sector</th></tr></thead><tbody id="overlapStocksBody"><tr><td colspan="4" class="muted">No holdings imported.</td></tr></tbody></table></div>
+    </div>
+   </div>
+   <div class="grid two section-gap">
+    <div class="panel-box">
+     <div class="panel-heading"><div><h3>Blended top holdings</h3><p>Look-through weights based on the investment amount entered for each fund.</p></div></div>
+     <div class="table-scroll"><table><thead><tr><th>Security</th><th>Blended weight</th><th>Sector</th></tr></thead><tbody id="blendedHoldingsBody"><tr><td colspan="3" class="muted">No holdings imported.</td></tr></tbody></table></div>
+    </div>
+    <div class="panel-box">
+     <div class="panel-heading"><div><h3>Sector concentration</h3><p>Aggregated sector exposure across the uploaded scheme holdings.</p></div></div>
+     <div id="blendedSectors"><div class="empty">No holdings imported.</div></div>
+     <div id="overlapNarrative" class="note-box">Upload a holdings CSV to see where your funds may duplicate exposures.</div>
+    </div>
+   </div>
+   <div class="panel-box advanced-only">
+    <div class="panel-heading"><div><h3>Method and data-quality checks</h3><p>Advanced view exposes identifier quality, reporting dates and holdings coverage.</p></div></div>
+    <div id="overlapMethod" class="metric-caption">No portfolio data loaded.</div>
+   </div>
+   <div class="warning-box">Overlap is a descriptive holdings snapshot, not a recommendation to buy or sell. It does not account for derivatives look-through, cash, futures, options, fund-of-funds transparency, intramonth trades or changes after the disclosure date. Review diversification across asset classes, sectors, market capitalisation, factors and liquidity, not stock overlap alone.</div>
+  </section>
+
   <div class="footer">FundLens is a product prototype. Mutual fund investments are subject to market risks. Verify current scheme details with the relevant AMC. This tool is not investment advice.</div>
  </main>
 </div>
@@ -379,6 +432,152 @@ function renderCategoryLens(m){const kind=classifyScheme(state.meta,getName()),r
 function renderDisclosureLens(){const r=referenceDisclosure[state.code];if(!r){$('disclosureLens').innerHTML='<div class="data-status warn">No curated AMC snapshot is mapped to this scheme. Do not infer AUM, TER, riskometer or benchmark from NAV. Use the latest AMC factsheet / SID.</div>';return}$('disclosureLens').innerHTML='<div class="method-row"><b>Scheme AUM</b><span>'+r.aum+' · '+r.aumDate+'</span></div><div class="method-row"><b>Cost disclosure</b><span>'+r.cost+' · '+r.costLabel+' · '+r.costDate+'</span></div><div class="method-row"><b>Riskometer</b><span>'+r.risk+'</span></div><div class="method-row"><b>Benchmark</b><span>'+r.benchmark+'</span></div><div class="method-row"><b>AMC-reported stats</b><span>'+r.reported+'</span></div><div class="data-status warn">'+escapeHtml(r.note)+'</div><div class="metric-caption">Source: <a class="source-link" href="'+r.source+'" target="_blank" rel="noopener">'+escapeHtml(r.sourceLabel)+' ↗</a>. Dated source snapshot, not a live feed. Kept separate from calculated metrics.</div>'}
 function renderGuidedResearch(){if(!state.data.length)return;const roll=state.rolling?.length?state.rolling:calcRolling(state.data,Number($('windowSlider')?.value||36),$('frequency')?.value||'weekly','cagr'),v=roll.map(x=>x.value),positive=v.length?v.filter(x=>x>0).length/v.length*100:NaN,med=median(v),dd=maxDrawdown(state.data);$('guidedPositive').textContent=Number.isFinite(positive)?positive.toFixed(1)+'%':'Not enough history';$('guidedMedian').textContent=Number.isFinite(med)?fmtPct(med):'—';$('guidedDrawdown').textContent=Number.isFinite(dd)?fmtPct(dd):'—';$('guidedPositiveNote').textContent=roll.length+' overlapping windows · '+Number($('windowSlider')?.value||36)+'-month holding period';$('guidedMedianNote').textContent='Median annualised CAGR across eligible start dates';const m=calcAdvancedStats(),kind=classifyScheme(state.meta,getName());let n=roll.length?'Across '+roll.length+' overlapping historical windows, '+positive.toFixed(1)+'% ended positive. The median annualised outcome was '+fmtPct(med)+'. Past outcomes do not predict future returns.':'Not enough history for this rolling window. Try a shorter holding period.';n+=Number.isFinite(m.beta)?' Against '+state.benchmarkName+', matched analysis shows '+fmtPct(m.excessCagr)+' CAGR difference over the common period. Open Advanced for risk-adjusted ratios.':' Benchmark-relative conclusions are withheld until a matched TRI is loaded. NAV-only data cannot show whether the fund beat its benchmark.';if(kind==='debt')n+=' For debt funds, also examine credit quality, yield and duration.';if(kind==='hybrid')n+=' For hybrid funds, inspect equity and debt exposures separately.';$('guidedNarrative').textContent=n}
 function readHoldingsFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const rows=parseCSVRows(reader.result);if(rows.length<2)throw new Error('The CSV is empty.');const h=rows[0].map(x=>x.toLowerCase().trim()),si=h.findIndex(x=>/security|instrument|stock|name/.test(x)),se=h.findIndex(x=>/sector|industry/.test(x)),wi=h.findIndex(x=>/weight|allocation|%/.test(x));if(si<0||wi<0)throw new Error('Required columns: Security and Weight (%). Sector is recommended.');const items=rows.slice(1).map(r=>({security:r[si]||'Unnamed security',sector:se>=0?(r[se]||'Unclassified'):'Unclassified',weight:Number(String(r[wi]||'').replace(/[% ,]/g,''))})).filter(x=>Number.isFinite(x.weight)&&x.weight>0);if(!items.length)throw new Error('No positive holding weights found.');const totals={};items.forEach(x=>totals[x.sector]=(totals[x.sector]||0)+x.weight);const sectors=Object.entries(totals).sort((a,b)=>b[1]-a[1]);$('holdingsStatus').className='data-status ok';$('holdingsStatus').textContent=items.length+' holdings parsed.';$('holdingsOutput').innerHTML='<b>'+items.length+' securities parsed. Top sector exposures:</b>'+sectors.slice(0,8).map(([s,w])=>'<div class="exposure-row"><span>'+escapeHtml(s)+'</span><div class="exposure-track"><i style="width:'+Math.min(100,w)+'%"></i></div><b>'+w.toFixed(2)+'%</b></div>').join('')+'<div class="metric-caption">Sector weights are summed from uploaded AMC disclosure. Missing cash, derivatives or unclassified assets can prevent totals reaching 100%.</div>'}catch(e){$('holdingsStatus').className='data-status warn';$('holdingsStatus').textContent=e.message}};reader.readAsText(file)}
+
+let overlapSchemes = [];
+function overlapNorm(v){return String(v||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'')}
+function overlapNum(v){const n=Number(String(v??'').replace(/[₹,%\\s,]/g,''));return Number.isFinite(n)?n:NaN}
+function overlapEsc(v){return escapeHtml(String(v??''))}
+function findColumn(headers,names){for(const n of names){const i=headers.indexOf(n);if(i>=0)return i}return -1}
+function downloadOverlapTemplate(){
+ const rows=[
+  ['SchemeName','SchemeCode','Security','ISIN','Sector','WeightPct','DisclosureDate','InvestmentAmount'],
+  ['Example Equity Fund','EXAMPLE1','ABC Limited','INE000A01000','Financials','5.25','2026-10-31','25000'],
+  ['Example Equity Fund','EXAMPLE1','XYZ Limited','INE000B01000','Information Technology','4.10','2026-10-31','25000'],
+  ['Example Index Fund','EXAMPLE2','ABC Limited','INE000A01000','Financials','6.80','2026-10-31','15000'],
+  ['Example Index Fund','EXAMPLE2','LMN Limited','INE000C01000','Consumer','3.40','2026-10-31','15000']
+ ];
+ const csv=rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='fundlens_multi_scheme_holdings_template.csv';a.click();URL.revokeObjectURL(url);
+}
+function parseOverlapCSV(text){
+ const rows=parseCSVRows(text);if(rows.length<3)throw new Error('Upload a header and holdings rows for at least two schemes.');
+ const h=rows[0].map(x=>overlapNorm(x));
+ const schemeCol=findColumn(h,['schemename','fundname','scheme','fund']);
+ const codeCol=findColumn(h,['schemecode','fundcode','amcschemecode']);
+ const secCol=findColumn(h,['security','instrument','stock','company','holding','nameofinstrument']);
+ const isinCol=findColumn(h,['isin','isinid']);
+ const sectorCol=findColumn(h,['sector','industry']);
+ const weightCol=findColumn(h,['weightpct','weightpercent','weight','allocationpct','allocation','netassets','percentageofnetassets','percentage']);
+ const dateCol=findColumn(h,['disclosuredate','portfoliodate','asofdate','date','asat']);
+ const amountCol=findColumn(h,['investmentamount','allocatedamount','amountinvested','allocationamount']);
+ if(schemeCol<0||secCol<0||weightCol<0)throw new Error('Required columns: SchemeName, Security and WeightPct. ISIN and DisclosureDate are strongly recommended.');
+ const grouped=new Map(),invalid=[];
+ rows.slice(1).forEach((r,idx)=>{
+  const name=String(r[schemeCol]||'').trim(),security=String(r[secCol]||'').trim(),weight=overlapNum(r[weightCol]);
+  if(!name||!security||!Number.isFinite(weight)||weight<=0){invalid.push(idx+2);return}
+  const code=codeCol>=0?String(r[codeCol]||'').trim():'';
+  const id=code||overlapNorm(name);
+  if(!grouped.has(id))grouped.set(id,{id,name,code,holdings:new Map(),dates:new Set(),allocation:10000});
+  const g=grouped.get(id);
+  const isin=isinCol>=0?String(r[isinCol]||'').trim().toUpperCase():'';
+  const key=isin?'ISIN:'+isin:'NAME:'+overlapNorm(security);
+  const sector=sectorCol>=0?String(r[sectorCol]||'Unclassified').trim():'Unclassified';
+  const d=dateCol>=0?String(r[dateCol]||'').trim():'';
+  if(d)g.dates.add(d);
+  const amt=amountCol>=0?overlapNum(r[amountCol]):NaN;
+  if(Number.isFinite(amt)&&amt>0)g.allocation=amt;
+  const old=g.holdings.get(key);
+  if(old){old.weight+=weight;if(old.sector==='Unclassified'&&sector!=='Unclassified')old.sector=sector}
+  else g.holdings.set(key,{key,isin,security,sector,weight});
+ });
+ const schemes=[...grouped.values()].filter(x=>x.holdings.size);
+ if(schemes.length<2)throw new Error('Only '+schemes.length+' valid scheme was found. Include at least two different scheme names or scheme codes.');
+ schemes.forEach(g=>{
+  const dates=[...g.dates];
+  g.dateLabel=dates.length===1?dates[0]:dates.length>1?'Multiple dates': 'Date not supplied';
+  g.totalWeight=[...g.holdings.values()].reduce((s,x)=>s+x.weight,0);
+ });
+ return {schemes,invalidRows:invalid};
+}
+function setOverlapAllocations(){
+ document.querySelectorAll('[data-overlap-allocation]').forEach(input=>{
+  input.addEventListener('change',()=>{
+   const s=overlapSchemes.find(x=>x.id===input.dataset.overlapAllocation),n=overlapNum(input.value);
+   if(s&&Number.isFinite(n)&&n>=0){s.allocation=n;renderPortfolioOverlap()}
+  });
+ });
+}
+function renderPortfolioOverlap(){
+ if(!overlapSchemes.length)return;
+ const fmtMoney=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:0});
+ $('overlapAllocationRows').innerHTML=overlapSchemes.map(s=>'<tr><td class="fund-cell">'+overlapEsc(s.name)+'</td><td>'+overlapEsc(s.dateLabel)+'</td><td>'+s.totalWeight.toFixed(2)+'%</td><td><input class="input" type="number" min="0" step="1000" value="'+Number(s.allocation||0)+'" data-overlap-allocation="'+overlapEsc(s.id)+'" style="width:140px"></td></tr>').join('');
+ setOverlapAllocations();
+ const totalInvestment=overlapSchemes.reduce((a,s)=>a+(Number(s.allocation)||0),0);
+ const allKeys=new Set();overlapSchemes.forEach(s=>s.holdings.forEach((h,k)=>allKeys.add(k)));
+ const blend=new Map();
+ for(const key of allKeys){
+  const item={key,security:'',isin:'',sector:'Unclassified',funds:0,byFund:{},investedValue:0};
+  overlapSchemes.forEach(s=>{
+   const h=s.holdings.get(key);
+   if(h){item.security=item.security||h.security;item.isin=item.isin||h.isin;item.sector=item.sector==='Unclassified'?h.sector:item.sector;item.funds++;item.byFund[s.id]=h.weight;item.investedValue+=(Number(s.allocation)||0)*h.weight/100}
+  });
+  item.blended=totalInvestment>0?item.investedValue/totalInvestment*100:0;
+  blend.set(key,item);
+ }
+ const blended=[...blend.values()].sort((a,b)=>b.blended-a.blended);
+ const top10=blended.slice(0,10),top10Weight=top10.reduce((a,x)=>a+x.blended,0);
+ const sectors=new Map();
+ blended.forEach(x=>sectors.set(x.sector,(sectors.get(x.sector)||0)+x.blended));
+ const sectorRows=[...sectors.entries()].sort((a,b)=>b[1]-a[1]);
+ const largestSector=sectorRows[0];
+ $('overlapKpis').innerHTML=[
+  ['Schemes analysed',overlapSchemes.length,'Dated portfolio disclosures'],
+  ['Unique securities',blended.length,'Matched by ISIN where available'],
+  ['Top 10 stock exposure',top10Weight.toFixed(2)+'%','Of total amount invested'],
+  ['Largest sector',largestSector?largestSector[0]:'—',largestSector?largestSector[1].toFixed(2)+'% blended exposure':'No sector data']
+ ].map(([l,v,n])=>'<div class="metric-card"><div class="m-label">'+overlapEsc(l)+'</div><div class="m-value" style="font-size:17px">'+overlapEsc(v)+'</div><div class="m-note">'+overlapEsc(n)+'</div></div>').join('');
+ const pairs=[];
+ for(let i=0;i<overlapSchemes.length;i++)for(let j=i+1;j<overlapSchemes.length;j++){
+  const a=overlapSchemes[i],b=overlapSchemes[j],keys=[...a.holdings.keys()].filter(k=>b.holdings.has(k));
+  const overlap=keys.reduce((sum,k)=>sum+Math.min(a.holdings.get(k).weight,b.holdings.get(k).weight),0);
+  pairs.push({a,b,overlap,keys});
+ }
+ $('overlapMatrixBody').innerHTML=pairs.length?pairs.map(p=>'<tr><td>'+overlapEsc(p.a.name)+'</td><td>'+overlapEsc(p.b.name)+'</td><td><b>'+p.overlap.toFixed(2)+'%</b></td><td>'+p.keys.length+'</td></tr>').join(''):'<tr><td colspan="4" class="muted">Add at least two schemes.</td></tr>';
+ const repeated=blended.filter(x=>x.funds>=2).sort((a,b)=>b.blended-a.blended);
+ $('overlapStocksBody').innerHTML=repeated.length?repeated.slice(0,15).map(x=>'<tr><td class="fund-cell">'+overlapEsc(x.security)+'</td><td>'+x.funds+' / '+overlapSchemes.length+'</td><td>'+x.blended.toFixed(2)+'%</td><td>'+overlapEsc(x.sector)+'</td></tr>').join(''):'<tr><td colspan="4" class="muted">No repeated positions found with the selected identifiers.</td></tr>';
+ $('blendedHoldingsBody').innerHTML=blended.slice(0,15).map(x=>'<tr><td class="fund-cell">'+overlapEsc(x.security)+'</td><td>'+x.blended.toFixed(2)+'%</td><td>'+overlapEsc(x.sector)+'</td></tr>').join('');
+ $('blendedSectors').innerHTML=sectorRows.slice(0,10).map(([sector,weight])=>'<div class="exposure-row"><span>'+overlapEsc(sector)+'</span><div class="exposure-track"><i style="width:'+Math.min(100,Math.max(0,weight))+'%"></i></div><b>'+weight.toFixed(2)+'%</b></div>').join('')||'<div class="empty">Sector data not supplied.</div>';
+ const commonDates=[...new Set(overlapSchemes.map(s=>s.dateLabel))];
+ const coverageWarn=overlapSchemes.filter(s=>s.totalWeight<90||s.totalWeight>105);
+ const allocWarn=totalInvestment<=0;
+ $('overlapNarrative').textContent='Across '+overlapSchemes.length+' schemes and ₹'+totalInvestment.toLocaleString('en-IN')+' total invested, the top 10 disclosed stock positions account for '+top10Weight.toFixed(2)+'% of the invested amount on a look-through basis. This is a holdings snapshot, not a forecast or a complete measure of diversification.';
+ const methodBits=[
+  '<b>Identifier rule:</b> ISIN is used when provided; otherwise security names are normalised for matching. Name-only matches can combine securities with similar names.',
+  '<b>Pairwise overlap:</b> Σ min(weight A, weight B) across matched securities. Holdings weights are used as reported and are not rescaled to 100%.',
+  '<b>Blended weight:</b> Σ (scheme investment × disclosed security weight) / total investment.',
+  '<b>Input dates:</b> '+overlapSchemes.map(s=>overlapEsc(s.name)+': '+overlapEsc(s.dateLabel)).join(' · '),
+  '<b>Reported holdings coverage:</b> '+overlapSchemes.map(s=>overlapEsc(s.name)+': '+s.totalWeight.toFixed(2)+'%').join(' · '),
+  coverageWarn.length?'<b>Coverage warning:</b> One or more scheme holdings totals are below 90% or above 105%. Cash, derivatives, unclassified lines or format issues may be missing / duplicated.':'<b>Coverage check:</b> All uploaded scheme weights sum between 90% and 105%.',
+  commonDates.length>1?'<b>Date warning:</b> The uploaded scheme disclosures do not share one reporting date. Pairwise overlap can be distorted by holdings changes between snapshots.':'<b>Date check:</b> Reporting-date labels are consistent within the uploaded CSV, subject to the supplied source data.'
+ ];
+ $('overlapMethod').innerHTML=methodBits.map(x=>'<div class="method-row">'+x+'</div>').join('');
+ if(allocWarn)$('overlapUploadStatus').textContent+=' Allocation amounts are all zero; enter positive amounts to calculate blended exposures.';
+}
+function handleOverlapFile(file){
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const parsed=parseOverlapCSV(reader.result);
+   overlapSchemes=parsed.schemes;
+   $('overlapUploadStatus').className='data-status ok';
+   $('overlapUploadStatus').textContent='Loaded '+overlapSchemes.length+' schemes and '+overlapSchemes.reduce((a,s)=>a+s.holdings.size,0)+' unique scheme-security positions.'+(parsed.invalidRows.length?' Skipped '+parsed.invalidRows.length+' blank or invalid rows.':'');
+   renderPortfolioOverlap();
+  }catch(e){
+   overlapSchemes=[];
+   $('overlapUploadStatus').className='data-status warn';
+   $('overlapUploadStatus').textContent=e.message;
+   $('overlapAllocationRows').innerHTML='<tr><td colspan="4">No valid holdings loaded.</td></tr>';
+   $('overlapKpis').innerHTML='';
+   $('overlapMatrixBody').innerHTML='<tr><td colspan="4">No valid holdings loaded.</td></tr>';
+  }
+ };
+ reader.onerror=()=>{$('overlapUploadStatus').textContent='Could not read this CSV file.'};
+ reader.readAsText(file);
+}
+$('overlapFile')?.addEventListener('change',e=>handleOverlapFile(e.target.files[0]));
+$('downloadOverlapTemplate')?.addEventListener('click',downloadOverlapTemplate);
+
 function setExperience(view){document.body.dataset.view=view;document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));try{sessionStorage.setItem('fundlens-view',view)}catch(e){}if(state.page==='compare')renderCompare()}
 document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.addEventListener('click',()=>setExperience(b.dataset.view)));
 $('benchmarkName')?.addEventListener('change',e=>{state.benchmarkName=e.target.value;state.benchmarkSeries=[];$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='Benchmark changed. Import matched daily TRI for '+state.benchmarkName+'.';renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare()});
