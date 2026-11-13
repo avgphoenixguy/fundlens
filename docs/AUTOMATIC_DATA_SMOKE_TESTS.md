@@ -51,9 +51,9 @@ This is a holdings overlap measure, not correlation, diversification quality or 
 - Verified automatic holdings adapters: **PPFAS Mutual Fund and HDFC Mutual Fund**. This does not mean every AMC or every scheme is covered.
 - Holdings files are monthly disclosures, not real-time positions.
 - Only exact ISIN matches are used for stock overlap. Name-only fuzzy security matches are not used.
-- Debt, cash, derivatives, unclassified rows and rows without valid ISINs are excluded from the equity-overlap view.
+- Debt, cash, derivatives, non-equity rows and rows without valid ISINs are excluded. A listed-equity row with a valid ISIN but no sector field remains in the overlap calculation and is assigned to the explicit 'Sector not disclosed' donut bucket.
 - Arbitrage and equity-savings schemes are withheld because gross share holdings do not represent net market exposure.
-- Analysis is suppressed when the selected reporting dates differ by more than 45 days. Disclosures older than 45 days are marked stale.
+- Analysis is suppressed if selected reporting dates differ by more than 45 days or if any individual disclosure is older than 45 days. Stale snapshots are not merely warned about; combined overlap and exposure are withheld.
 - Allocation inputs are hypothetical weights across selected funds. No Angel One login, account integration, holdings upload or personal portfolio access is used.
 - Unsupported AMC sources, unrecognized workbooks, missing dates and failed validations must produce explicit unavailable states, never estimates.
 
@@ -68,6 +68,17 @@ Use the preview build for branch `feat/automatic-portfolio-holdings` and call th
 - `/api/holdings?schemeCode=143269` (PPFAS Liquid Direct Growth, expected no-equity response)
 - Append `&refresh=1` to bypass edge caching for a source refresh.
 
+
+## Regression checks for the latest UI safeguards
+
+- In the benchmark resolver, `NIFTY 50 TRI` and `NIFTY 50 Total Return Index` must map to `NIFTY 50`; `NIFTY 50 Equal Weight TRI` and `NIFTY 50 Momentum 50 TRI` must remain unsupported.
+- With AMFI unavailable, a curated reference benchmark must display its AMC source and snapshot date. It must not be described as AMFI-mapped.
+- With benchmark data present, only exact-date matched consecutive observations 4–11 calendar days apart enter weekly Alpha / Beta / FundLens IR / tracking-error regression. Longer gaps must be skipped.
+- In Advanced mode, the Guided Research hero must be hidden. In Guided mode, Advanced-only sections must be hidden.
+- The comparison page must accept different categories, plans, options and benchmarks, while benchmark regression remains unavailable unless the same validated benchmark series is applicable.
+- For an equity scheme with no matched TRI, Tracking error must read `Unavailable`, not `Not primary`.
+- The sector donut must include the `Sector not disclosed` bucket when present and disclose its inclusion in the caption.
+- Holdings age greater than 45 days, missing age, or selected disclosure-date spread greater than 45 days must withhold combined overlap and exposure.
 
 ## Cloudflare Workers deployment
 
@@ -90,6 +101,6 @@ This audit could not fetch the supplied `workers.dev` hostname from its current 
 2. Confirm `/api/risk-free-rate` returns a dated RBI observation and inspect `isFallback`.
 3. Request `/api/benchmark?index=NIFTY%2050&start=2023-01-01&end=2026-11-13`; verify a weekly response and a non-zero observation count.
 4. Request `/api/holdings?schemeCode=122639` and `/api/holdings?schemeCode=118955`; verify both return HTTP 200 and comparable disclosure dates.
-5. In Holdings Overlap, add those two supported Direct Growth schemes, keep both hypothetical allocations above zero, and calculate. The pairwise heatmap should show the two off-diagonal overlap cells (same value in both directions), and the sector donut should show the allocation-weighted classified-equity mix. Existing tables should remain visible below the charts.
+5. In Holdings Overlap, add those two supported Direct Growth schemes, keep both hypothetical allocations above zero, and calculate. The pairwise heatmap should show the two off-diagonal overlap cells (same value in both directions), and the sector donut should show the allocation-weighted parsed listed-equity mix, including 'Sector not disclosed' when present. Existing tables should remain visible below the charts.
 
-The charts depend on validated holdings, exact ISIN matching, disclosure dates within 45 days and positive allocation weights. If those conditions fail, FundLens intentionally withholds the combined charts instead of inventing or silently renormalising data.
+The charts depend on validated holdings, exact ISIN matching, each snapshot being no more than 45 days old, selected disclosure dates being within 45 days of one another, and positive allocation weights. If those conditions fail, FundLens intentionally withholds combined analysis instead of inventing or silently renormalising data.
