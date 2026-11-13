@@ -40,7 +40,11 @@ This is a holdings overlap measure, not correlation, diversification quality or 
 - RBI 10-year sovereign yield proxy returned HTTP 200, 7.243% as of 12 November 2026, from RBI Current Rates. The app labels this as a long-dated sovereign proxy held constant across the selected NAV sample, not a maturity-matched short-term daily risk-free series.
 - AMFI Fund Performance API returned benchmark, AUM and official plan-specific IR for Parag Parikh Flexi Cap Fund Direct Growth.
 - AMFI TER workbook retrieval succeeded on a direct retry for Parag Parikh Flexi Cap Fund Direct Growth (0.68%, date 12 November 2026). One concurrent smoke-test attempt timed out, so upstream availability should be treated as variable rather than guaranteed.
-- The Nifty Indices TRI route remains subject to upstream anti-automation/challenge responses in the serverless environment. When exact-date TRI observations are not available, benchmark-dependent Alpha, Beta, tracking error and benchmark-relative rolling metrics must remain unavailable. FundLens must not substitute a price index for TRI.
+- The earlier direct NSE historical-data route returned HTML challenge responses and was retired.
+- The replacement GitHub implementation reads Tipsheet's published weekly NSE TRI-derived dataset for supported Nifty indices. The connector selects only tr (Total Return), excludes pr (Price Return), validates weekly spacing and matches benchmark observations to NAV dates exactly.
+- A local parser test selected tr from a representative nested dataset shape. This is a parser test, not a live upstream integration test.
+- The latest Netlify deployment containing the parser fix was skipped because the account had exhausted its available deployment credits. The live production endpoint has therefore not been verified with the latest code. Until that deployment is available and returns validated weekly observations, benchmark-dependent FundLens Alpha, Beta, calculated IR, tracking error and benchmark-relative rolling metrics must remain unavailable.
+- No price-return series, Tipsheet model index, fabricated value or synthetic benchmark is permitted as a fallback.
 
 ## Scope and known limitations
 
