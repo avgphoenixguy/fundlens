@@ -457,22 +457,26 @@ function parseOverlapCSV(text){
  const secCol=findColumn(h,['security','instrument','stock','company','holding','nameofinstrument']);
  const isinCol=findColumn(h,['isin','isinid']);
  const sectorCol=findColumn(h,['sector','industry']);
- const weightCol=findColumn(h,['weightpct','weightpercent','weight','allocationpct','allocation','netassets','percentageofnetassets','percentage']);
+ const weightCol=findColumn(h,['weightpct','weightpercent','weight','allocationpct','allocation','netassets','percentageofnetassets','percentageofnav','netasset','netassets','percentage']);
  const dateCol=findColumn(h,['disclosuredate','portfoliodate','asofdate','date','asat']);
  const amountCol=findColumn(h,['investmentamount','allocatedamount','amountinvested','allocationamount']);
  if(schemeCol<0||secCol<0||weightCol<0)throw new Error('Required columns: SchemeName, Security and WeightPct. ISIN and DisclosureDate are strongly recommended.');
  const grouped=new Map(),invalid=[];
  rows.slice(1).forEach((r,idx)=>{
-  const name=String(r[schemeCol]||'').trim(),security=String(r[secCol]||'').trim(),weight=overlapNum(r[weightCol]);
-  if(!name||!security||!Number.isFinite(weight)||weight<=0){invalid.push(idx+2);return}
   const code=codeCol>=0?String(r[codeCol]||'').trim():'';
+  const rawName=schemeCol>=0?String(r[schemeCol]||'').trim():'';
+  const name=rawName||(code?'Scheme '+code:'');
+  const security=String(r[secCol]||'').trim(),weight=overlapNum(r[weightCol]);
+  if((!rawName&&!code)||!security||!Number.isFinite(weight)||weight<=0){invalid.push(idx+2);return}
   const id=code||overlapNorm(name);
   if(!grouped.has(id))grouped.set(id,{id,name,code,holdings:new Map(),dates:new Set(),allocation:10000});
   const g=grouped.get(id);
   const isin=isinCol>=0?String(r[isinCol]||'').trim().toUpperCase():'';
   const key=isin?'ISIN:'+isin:'NAME:'+overlapNorm(security);
   const sector=sectorCol>=0?String(r[sectorCol]||'Unclassified').trim():'Unclassified';
-  const d=dateCol>=0?String(r[dateCol]||'').trim():'';
+  const dRaw=dateCol>=0?String(r[dateCol]||'').trim():'';
+  const parsedDate=dRaw?parseFlexibleDate(dRaw):null;
+  const d=parsedDate instanceof Date&&!isNaN(parsedDate)?dateKey(parsedDate):dRaw;
   if(d)g.dates.add(d);
   const amt=amountCol>=0?overlapNum(r[amountCol]):NaN;
   if(Number.isFinite(amt)&&amt>0)g.allocation=amt;
