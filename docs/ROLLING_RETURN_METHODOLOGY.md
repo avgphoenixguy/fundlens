@@ -1,46 +1,56 @@
 # FundLens rolling-return methodology
 
-## User-controlled inputs
+## Inputs
 
 - Holding window: 1 to 120 calendar months.
-- Start-date frequency:
-  - Daily: each available NAV observation can become a start date.
-  - Weekly: every fifth NAV observation.
-  - Monthly: every twenty-first NAV observation.
-- Output:
-  - Absolute return over the selected holding period.
-  - Annualised CAGR over the actual elapsed calendar time represented by the selected calendar-month window.
+- Start-date frequency: daily (each NAV observation), weekly (every fifth observation), or monthly (every twenty-first observation).
+- Return display: absolute holding-period return or annualised CAGR using actual elapsed calendar time between the start and end observations.
 
-## Window construction
+## Scheme-only window construction
 
-For each eligible start observation (i):
+For each eligible NAV start observation i:
 
-1. Set the target end date to the start date plus the selected number of calendar months.
-2. Find the first NAV observation on or after the target end date.
-3. Compute the absolute return as (NAV_{end}/NAV_{start}-1).
-4. For CAGR mode, annualise the holding-period return using the selected window length in months.
-5. Continue until the NAV series no longer contains a valid end observation.
+1. Shift the start date forward by the selected number of calendar months.
+2. Find the first available NAV observation on or after that target date.
+3. Compute absolute return as NAV_end / NAV_start − 1.
+4. For CAGR mode, annualise using actual elapsed days: (NAV_end / NAV_start)^(365.25 / elapsed_days) − 1.
+5. Stop when history no longer contains an eligible end observation.
 
-The output contains an overlapping sequence of historical outcomes. Adjacent windows are not independent observations.
+Each start date produces an overlapping historical holding window. Adjacent windows are not independent observations.
 
 ## Summary statistics
 
 - Average and median rolling outcome.
-- Minimum and maximum rolling outcome.
-- Percentage of rolling windows with a positive return.
-- Histogram of the observed rolling outcomes.
+- Best and worst observed window.
+- Percentage of rolling windows with a positive outcome.
+- Histogram of historical outcomes.
 
-## Other risk metrics
+The positive-window share is a descriptive statistic of sampled historical windows, not a forecast or probability of a positive future return.
 
-- Daily simple NAV returns are computed from adjacent available observations.
-- Annualised volatility = sample standard deviation of daily returns × square root of 252.
-- Drawdown = NAV / previous running maximum NAV − 1.
-- Maximum drawdown = minimum observed drawdown.
+## Benchmark-relative rolling outcomes
+
+When an appropriate daily benchmark TRI has been imported, FundLens uses exact-date matched scheme NAV / TRI observations. For each eligible matched start date it:
+1. Shifts by the selected calendar-month holding period.
+2. Finds the first available matched observation on or after the target date.
+3. Calculates fund CAGR and benchmark TRI CAGR over the same start and end dates.
+4. Records excess CAGR as fund CAGR less benchmark CAGR.
+
+The interface reports the share of matched windows where fund CAGR exceeded benchmark CAGR, median excess CAGR and the number of matched windows. At least five matched holding windows are required to show an aggregate result. These remain historical descriptive statistics, not probabilities of future outperformance.
+
+## Risk metrics in other workspaces
+
+- Daily simple NAV returns use adjacent available NAV observations.
+- Annualised volatility = sample standard deviation of daily returns × √252.
+- Drawdown = NAV / prior running maximum NAV − 1.
+- Maximum drawdown = minimum drawdown observed in the selected history.
+
+Benchmark-relative figures require the correct total-return index. A price index is not a substitute for TRI.
 
 ## Important caveats
 
-- The current prototype uses NAV observations only. It does not yet adjust for a benchmark, risk-free rate, distributions outside a Growth option, or investor cash flows.
-- A benchmark comparison requires a matched total-return index series, aligned on dates and methodology. Do not substitute a price index for a TRI.
-- NAV API coverage and uptime depend on the third-party provider. Confirm current values against AMC and AMFI disclosures.
-- Expense ratio, AUM and holdings are not derived from NAV; they need separate dated sources.
-- Comparisons must respect category, plan, option, inception history and snapshot date.
+- NAV history is not a full total-return series for every plan / option. Verify Direct / Regular and Growth / IDCW.
+- NAV API coverage and uptime depend on the third-party provider. Verify NAV and scheme details against AMC / AMFI disclosures.
+- Expense ratio, AUM and holdings are not derived from NAV; they require separate dated sources.
+- The app does not model investor cash flows, taxes, exit loads, transaction costs or distributions not reflected in the selected NAV option.
+- Comparisons must respect category, plan, option, inception history, benchmark and snapshot date.
+- Benchmark-relative rolling statistics depend on the correctness of the imported TRI and scheme benchmark mapping.
