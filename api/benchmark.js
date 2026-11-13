@@ -18,7 +18,7 @@ const USER_AGENT = "Mozilla/5.0 (compatible; FundLensResearch/1.0; +https://fund
 function isoDate(value) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   const s = String(value || "").trim();
-  const m = s.match(/^(\\d{4})[-\/](\\d{1,2})[-\/](\\d{1,2})/);
+  const m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
   if (m) return m[1] + "-" + String(m[2]).padStart(2, "0") + "-" + String(m[3]).padStart(2, "0");
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
@@ -126,7 +126,7 @@ function collectSeries(node, path, inheritedMeta, out, depth) {
       if (Array.isArray(values) && values.length === node.dates.length) {
         const label = String(seriesName || "");
         const isPrice = /price|capital gain|price return/i.test(label);
-        const isTotalReturn = /total[ _-]*return|\\btri\\b/i.test(label);
+        const isTotalReturn = /total[ _-]*return|\btri\b/i.test(label);
         if (isTotalReturn && !isPrice) {
           out.push({
             path: path.join("/"),
@@ -183,7 +183,7 @@ function pickTotalReturnSeries(dataset) {
       (seriesNames.slice(0, 12).join(", ") || "none"));
   }
   candidates.sort((a, b) => {
-    const exact = x => /^total[ _-]*return$/i.test(x.label.trim()) ? 2 : /total[ _-]*return|\\btri\\b/i.test(x.label) ? 1 : 0;
+    const exact = x => /^total[ _-]*return$/i.test(x.label.trim()) ? 2 : /total[ _-]*return|\btri\b/i.test(x.label) ? 1 : 0;
     return exact(b.label) - exact(a.label);
   });
   return candidates[0];
@@ -206,7 +206,7 @@ module.exports = async function handler(req, res) {
       supported: Object.keys(BENCHMARKS)
     });
   }
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(start) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(end) || start > end) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) {
     return res.status(400).json({ error: "Dates must use YYYY-MM-DD and start must not exceed end." });
   }
   const startDate = isoDate(start), endDate = isoDate(end);
