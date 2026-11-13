@@ -65,7 +65,7 @@
 .research-hero h2{font-size:21px;letter-spacing:-.4px;margin:4px 0 6px}.research-hero p{color:#c2d6d2;font-size:12px;margin:0;max-width:780px}
 .insight-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
 .insight{background:#ffffff12;border:1px solid #ffffff22;border-radius:11px;padding:13px}.insight label{display:block;font-size:9px;letter-spacing:.7px;text-transform:uppercase;color:#b5cec8;font-weight:800}.insight strong{display:block;font-size:19px;margin:5px 0 2px}.insight small{display:block;color:#c2d6d2;font-size:10px;line-height:1.45}
-.advanced-only{display:none}body[data-view="advanced"] .advanced-only{display:block}body[data-view="guided"] .guided-only{display:block}body[data-view="guided"] .advanced-only{display:none}
+.advanced-only{display:none}.guided-only{display:none}body[data-view="advanced"] .advanced-only{display:block}body[data-view="guided"] .guided-only{display:block}body[data-view="guided"] .advanced-only{display:none}
 .panel-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px;box-shadow:var(--shadow);margin-bottom:15px}
 .panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:13px}
 .panel-heading h3{margin:0;color:#24354b;font-size:14px}.panel-heading p{margin:4px 0 0;color:#758397;font-size:11px}
@@ -358,7 +358,7 @@ body.studio-open .app-shell{display:block}
      <div class="card-head"><div><div class="card-title">Current selection</div><div class="card-sub">Scheme metadata from the NAV history provider.</div></div><span class="tag" id="selectedCode">SCHEME —</span></div>
      <h2 class="fund-title" id="universeFundName">Select a scheme</h2><div class="fund-meta" id="universeFundMeta">Choose a search result to inspect its NAV history.</div>
      <div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:17px"><div class="kpi"><div class="label">Available observations</div><div class="value" id="obsCount">—</div><div class="note">Daily NAV rows received</div></div><div class="kpi"><div class="label">History begins</div><div class="value" style="font-size:16px" id="historyStart">—</div><div class="note">Earliest available NAV</div></div></div>
-     <div class="note-box">The searchable directory includes scheme variants and plan/option combinations. Always match the same plan and option before comparing funds. Scheme metadata may not include TER, AUM or benchmark details.</div>
+The searchable directory includes scheme variants and plan/option combinations. For a like-for-like return comparison, use the same plan and option. The comparison workspace also supports broader descriptive comparisons, with each scheme’s plan and disclosures shown separately.
      <button class="btn primary" style="margin-top:13px" id="loadSelected">Open selected scheme</button>
     </div>
    </div>
@@ -412,7 +412,7 @@ body.studio-open .app-shell{display:block}
   <section class="panel" id="page-compare">
    <div class="page-head"><div><div class="eyebrow">SIDE-BY-SIDE RESEARCH</div><h1>Compare funds</h1><p>Compare up to three schemes using NAV-based performance, risk measures and each scheme’s available AMFI disclosures. Benchmark-relative estimates are shown only when the required benchmark data is validated.</p></div><div class="head-actions"><button class="btn" id="exportComparison" type="button">Export CSV ↓</button><button class="btn" id="compareAddFund">＋ Add another fund</button></div></div>
    <div class="card">
-    <div class="card-head"><div><div class="card-title">Comparison set</div><div class="card-sub">Up to three schemes. A second scheme is accepted only when its sub-category, plan, option and disclosed benchmark match the existing set.</div></div><span class="tag" id="compareCount">0 / 3 SELECTED</span></div>
+    <div class="card-head"><div><div class="card-title">Comparison set</div><div class="card-sub">Up to three schemes. Mix categories, plans and options for descriptive comparison, but interpret each scheme using its own benchmark, plan and disclosure context.</div></div><span class="tag" id="compareCount">0 / 3 SELECTED</span></div>
     <div class="compare-tray" id="compareTray"><span class="muted">Add a fund from the universe or current selection.</span></div>
     <div class="table-scroll section-gap"><table><thead id="compareHead"><tr><th>Metric</th></tr></thead><tbody id="compareBody"><tr><td class="muted">No funds selected.</td></tr></tbody></table></div>
     <div class="grid two section-gap">
@@ -455,7 +455,7 @@ body.studio-open .app-shell{display:block}
     <div class="search-results" id="overlapSearchResults"><div class="empty">No search results yet.</div></div>
    </div>
    <div class="panel-box">
-    <div class="panel-heading"><div><h3>2. Automatically retrieved disclosures</h3><p>FundLens fetches the latest matching public AMC workbook it can validate. Holdings snapshots retain their own as-of dates.</p></div><button class="btn" id="overlapRefresh" type="button">Refresh selected</button></div>
+FundLens fetches the latest matching public AMC workbook it can validate. Combined calculations require every selected snapshot to be no more than 45 days old.
     <div id="overlapSelected"><div class="empty">Add schemes above to retrieve their public portfolio disclosures.</div></div>
     <div class="note-box">Allocation weights below are only a hypothetical weighting across the funds you selected. They do not represent your actual Angel One holdings or account portfolio. Equal allocation is the default.</div>
    </div>
@@ -513,12 +513,22 @@ function categoryName(meta,name){return meta?.scheme_category||({equity:'Equity 
 function normalizedBenchmark(name){
  return String(name||'').toLowerCase().replace(/total\s*returns?\s*index|total\s*return\s*index|\btri\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
 }
+function benchmarkMappingSource(){
+ const live=String(state.amfiPerformance?.benchmark||'').trim();
+ if(live&&normalizedBenchmark(live)===normalizedBenchmark(state.benchmarkName))return 'AMFI current scheme-performance disclosure';
+ const ref=referenceDisclosure[state.code];
+ if(ref?.benchmark&&normalizedBenchmark(ref.benchmark)===normalizedBenchmark(state.benchmarkName)){
+  return 'curated fallback from '+(ref.sourceLabel||'AMC factsheet')+' ('+(ref.aumDate||ref.costDate||'date not stated')+')';
+ }
+ return state.benchmarkName?'configured fallback mapping; source not verified':'no verified benchmark mapping';
+}
+function setBenchmarkDefault(){
 function setBenchmarkDefault(){
  const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
  const el=$('benchmarkName');
  if(el){el.value=Array.from(el.options).some(o=>o.value===name||o.text===name)?name:'';state.benchmarkName=el.value}
  state.benchmarkSeries=[];state.benchmarkFrequency='weekly';state.benchmarkPeriodsPerYear=52;state.benchmarkSource=null;state.amfiPerformance=null;state.amfiTer=null;
- if($('benchmarkMapping'))$('benchmarkMapping').textContent='Fetching scheme benchmark from AMFI…';
+ if($('benchmarkMapping'))$('benchmarkMapping').textContent=name?'AMFI lookup pending. Current fallback: '+name+' · '+(ref?.sourceLabel||'configured reference mapping')+' · '+(ref?.aumDate||ref?.costDate||'source date not stated')+'. Verify against the latest SID / factsheet.':'Fetching the scheme benchmark from AMFI; no curated fallback is configured.';
  if($('benchmarkStatus')){$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='FundLens is retrieving scheme benchmark and official IR data from AMFI.'}
 }
 function amfiCategoryForScheme(meta,name){
@@ -534,9 +544,12 @@ function planForScheme(name){
  return /regular/i.test(String(name||''))?'regular':'direct';
 }
 function supportedNiftyBenchmark(name){
- const n=String(name||'').toUpperCase().replace(/\\bTRI\\b/g,'').replace(/[^A-Z0-9]+/g,' ').trim();
- const list=['NIFTY 50','NIFTY 100','NIFTY 500','NIFTY NEXT 50','NIFTY MIDCAP 150','NIFTY SMALLCAP 250'];
- return list.find(x=>n===x||n.startsWith(x+' '))||null;
+ const n=String(name||'').toUpperCase()
+  .replace(/\bTOTAL\s+RETURNS?\s+INDEX\b/g,' ')
+  .replace(/\bTRI\b/g,' ')
+  .replace(/[^A-Z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+ const allowed=new Set(['NIFTY 50','NIFTY 100','NIFTY 500','NIFTY NEXT 50','NIFTY MIDCAP 150','NIFTY SMALLCAP 250']);
+ return allowed.has(n)?n:null;
 }
 function parseFlexibleDate(v){if(!v)return null;const s=String(v).trim();let m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[-/ ]([A-Za-z]{3,}|\d{1,2})[-/ ](\d{2,4})$/);if(m){const mon=Number(m[2])?Number(m[2])-1:new Date(m[2]+' 1, 2000').getMonth();let y=Number(m[3]);if(y<100)y+=y>=70?1900:2000;return new Date(y,mon,+m[1])}return parseDate(s)}
 async function loadAutomaticResearchInputs(request){
@@ -575,12 +588,12 @@ async function loadAutomaticResearchInputs(request){
     select.value=body.benchmark;
    }
   }
-  $('benchmarkMapping').textContent=(body.benchmark||'No benchmark returned by AMFI')+' · AMFI report '+(body.reportDate||'date not supplied');
+   $('benchmarkMapping').textContent=state.benchmarkName?(state.benchmarkName+' · '+benchmarkMappingSource()+' · report '+(body.reportDate||'date not supplied')):'No benchmark returned by AMFI; no fallback mapping is configured.';
   $('disclosureLens')&&renderDisclosureLens();
   amfiResult={ok:true,body};
  }catch(e){
   state.amfiPerformance=null;
-  $('benchmarkMapping').textContent=(state.benchmarkName||'No scheme benchmark mapping')+' · AMFI feed unavailable';
+  $('benchmarkMapping').textContent=state.benchmarkName?('AMFI feed unavailable. Using '+state.benchmarkName+' · '+benchmarkMappingSource()+'. Verify against the latest scheme SID / factsheet.'):'AMFI feed unavailable and no verified fallback benchmark mapping is configured.';
   amfiResult={ok:false,error:e.message};
  }
  const terTask=(async()=>{
@@ -614,7 +627,7 @@ async function loadAutomaticResearchInputs(request){
    state.benchmarkSeries=data;state.benchmarkFrequency=body.resolution;state.benchmarkPeriodsPerYear=Number(body.periodsPerYear);state.benchmarkSource=body;
    benchmarkResult={ok:true,body};
    $('benchmarkStatus').className='data-status ok';
-   $('benchmarkStatus').textContent='Loaded '+data.length.toLocaleString('en-IN')+' weekly TRI-derived observations for AMFI-mapped '+mappedName+', '+data[0].date.toLocaleDateString('en-IN')+' to '+data.at(-1).date.toLocaleDateString('en-IN')+'. Source: Tipsheet / NSE Indices. Exact-date matching only; annualised at 52 periods per year.';
+   $('benchmarkStatus').textContent='Loaded '+data.length.toLocaleString('en-IN')+' weekly TRI-derived observations for '+benchmarkMappingSource()+': '+mappedName+', '+data[0].date.toLocaleDateString('en-IN')+' to '+data.at(-1).date.toLocaleDateString('en-IN')+'. Source: Tipsheet / NSE Indices. Exact-date matching only; annualised at 52 periods per year.';
   }catch(e){
    state.benchmarkSeries=[];state.benchmarkSource=null;state.benchmarkFrequency='weekly';state.benchmarkPeriodsPerYear=52;
    $('benchmarkStatus').className='data-status warn';
@@ -624,7 +637,7 @@ async function loadAutomaticResearchInputs(request){
  }else{
   state.benchmarkSeries=[];state.benchmarkSource=null;state.benchmarkFrequency='weekly';state.benchmarkPeriodsPerYear=52;
   $('benchmarkStatus').className='data-status warn';
-  $('benchmarkStatus').textContent=amfiResult.ok?'AMFI benchmark: '+(mappedName||'not supplied')+'. No weekly TRI-derived connector is configured for this benchmark family. Official AMFI IR may still be available; Alpha / Beta / tracking error are suppressed.':'AMFI benchmark mapping unavailable. Benchmark-relative metrics are suppressed rather than guessed.';
+  $('benchmarkStatus').textContent=(mappedName?'Benchmark mapping: '+benchmarkMappingSource()+' · '+mappedName+'. ':'No verified scheme benchmark mapping is available. ')+(amfiResult.ok?'No weekly TRI-derived connector is configured for this benchmark family.':'AMFI benchmark retrieval is unavailable and no supported TRI connector applies.')+' Official AMFI IR may still be available; Alpha / Beta / tracking error remain suppressed.';
   benchmarkResult={ok:false,error:'No supported weekly TRI-derived connector for benchmark'};
  }
  if(request!==state.loadRequest)return;
@@ -684,12 +697,15 @@ function matchedReturns(data=state.data,benchmarkSeries=state.benchmarkSeries){
  const bmap=new Map(benchmarkSeries.map(x=>[dateKey(x.date),x.value]));
  const pairs=data.map(x=>({date:x.date,fund:x.nav,bench:bmap.get(dateKey(x.date))})).filter(x=>Number.isFinite(x.bench));
  if(pairs.length<31)return{pairs,returns:[],reason:'Fewer than 31 exact common weekly dates. Check that the published weekly TRI-derived series covers the scheme history.'};
- const returns=[];
+ const returns=[];let skippedNonWeeklyGaps=0;
  for(let i=1;i<pairs.length;i++){
+  const gapDays=(pairs[i].date-pairs[i-1].date)/86400000;
+  // Keep regression observations genuinely weekly. Do not annualise multi-week gaps as one week.
+  if(gapDays<4||gapDays>11){skippedNonWeeklyGaps++;continue}
   const fr=pairs[i].fund/pairs[i-1].fund-1,br=pairs[i].bench/pairs[i-1].bench-1;
   if(Number.isFinite(fr)&&Number.isFinite(br))returns.push({date:pairs[i].date,fund:fr,bench:br,active:fr-br});
  }
- return{pairs,returns,reason:returns.length>=30?'':'Fewer than 30 matched weekly return observations.',frequency:'weekly',periodsPerYear:52};
+ return{pairs,returns,reason:returns.length>=30?'':'Fewer than 30 contiguous weekly return observations after excluding date gaps outside 4–11 days.',frequency:'weekly',periodsPerYear:52,skippedNonWeeklyGaps};
 }
 function calcAdvancedStats(data=state.data,benchmarkSeries=state.benchmarkSeries){
  const window=analysisWindow(data),d=window.data;
@@ -747,7 +763,7 @@ function renderResearchMetrics(){
  const amfiReturnsReady=Number.isFinite(amfiFund)&&Number.isFinite(amfiBench);
  const benchmarkCagr=benchmarkSuitable?m.benchCagr:(amfiReturnsReady?amfiBench:NaN);
  const excessCagr=benchmarkSuitable?m.excessCagr:(amfiReturnsReady?amfiFund-amfiBench:NaN);
- setMetric('metricTE',benchmarkSuitable?fmtPct(m.te):passive?'Unavailable':'Not primary',passive?'Annualised standard deviation of weekly active returns (√52).':'Tracking error requires matched weekly TRI-derived observations.');
+ const trackingErrorRelevant=primary||passive;setMetric('metricTE',trackingErrorRelevant?(ready?fmtPct(m.te):'Unavailable'):'Not primary',trackingErrorRelevant?'Annualised standard deviation of weekly active returns (√52). Requires sufficient exact-date-matched weekly TRI-derived observations.':'Tracking error is primarily relevant to benchmark-tracking strategies.');
  setMetric('metricBenchmarkCagr',Number.isFinite(benchmarkCagr)?fmtPct(benchmarkCagr):'Unavailable',benchmarkSuitable?'Matched weekly TRI-derived observations over the same dates (52 periods per year).':'AMFI-reported benchmark trailing return for '+(periodKey||'selected')+' period; report '+(state.amfiPerformance?.reportDate||'date unavailable')+'.');
  setMetric('metricExcessCagr',Number.isFinite(excessCagr)?fmtPct(excessCagr):'Unavailable',benchmarkSuitable?'Fund CAGR less benchmark CAGR over matched dates.':'AMFI-reported fund return less AMFI-reported benchmark return for '+(periodKey||'selected')+' period. Not risk-adjusted.');
  const rf=Number($('rfRate')?.value||0),period=$('analysisPeriod')?.selectedOptions?.[0]?.text||'3 years';
@@ -1027,7 +1043,7 @@ function overlapHeatmapMarkup(loaded,pairs){
 function sectorDonutMarkup(sectors){
  const valid=sectors.filter(x=>Number.isFinite(Number(x[1]))&&Number(x[1])>0);
  const total=valid.reduce((sum,x)=>sum+Number(x[1]),0);
- if(!valid.length||total<=0)return '<div class="empty">No classified listed-equity sector exposure is available for this selection.</div>';
+ if(!valid.length||total<=0)return '<div class="empty">No parsed listed-equity sector exposure is available for this selection.</div>';
  const visible=valid.slice(0,7).map(x=>({name:x[0],value:Number(x[1])}));
  if(valid.length>7)visible.push({name:'Other sectors',value:valid.slice(7).reduce((sum,x)=>sum+Number(x[1]),0)});
  const radius=54,circumference=2*Math.PI*radius;
@@ -1035,13 +1051,14 @@ function sectorDonutMarkup(sectors){
  const slices=visible.map((item,i)=>{
   const length=item.value/total*circumference;
   const color=OVERLAP_CHART_COLORS[i%OVERLAP_CHART_COLORS.length];
-  const circle='<circle cx="72" cy="72" r="'+radius+'" fill="none" stroke="'+color+'" stroke-width="19" stroke-dasharray="'+length.toFixed(3)+' '+(circumference-length).toFixed(3)+'" stroke-dashoffset="'+(-offset).toFixed(3)+'" transform="rotate(-90 72 72)"><title>'+escapeHtml(item.name)+': '+fmtNum(item.value/total*100,1)+'% of classified equity exposure</title></circle>';
+  const circle='<circle cx="72" cy="72" r="'+radius+'" fill="none" stroke="'+color+'" stroke-width="19" stroke-dasharray="'+length.toFixed(3)+' '+(circumference-length).toFixed(3)+'" stroke-dashoffset="'+(-offset).toFixed(3)+'" transform="rotate(-90 72 72)"><title>'+escapeHtml(item.name)+': '+fmtNum(item.value/total*100,1)+'% of parsed listed-equity exposure</title></circle>';
   offset+=length;
   return {circle,name:item.name,value:item.value,color,share:item.value/total*100};
  });
  const legend=slices.map(x=>'<li><span class="sector-swatch" style="background:'+x.color+'"></span><span class="sector-name" title="'+escapeHtml(x.name)+'">'+escapeHtml(x.name)+'<span class="sector-values">'+fmtNum(x.value,2)+'% of modelled NAV</span></span><b>'+fmtNum(x.share,1)+'%</b></li>').join('');
- return '<div class="donut-layout"><svg class="sector-donut" viewBox="0 0 144 144" role="img" aria-label="Sector exposure donut chart"><circle cx="72" cy="72" r="'+radius+'" fill="none" stroke="#edf1f4" stroke-width="19"/>'+slices.map(x=>x.circle).join('')+'<text x="72" y="67" text-anchor="middle" font-size="10" font-weight="800" fill="#748295">CLASSIFIED</text><text x="72" y="81" text-anchor="middle" font-size="11" font-weight="850" fill="#26394e">EQUITY</text></svg><ul class="sector-legend">'+legend+'</ul></div><div class="metric-caption">Donut slices show each sector as a share of the classified listed-equity exposure. The smaller NAV figures show the corresponding contribution to the hypothetical combined portfolio. Debt, cash, derivatives and unclassified positions are excluded.</div>';
+ return '<div class="donut-layout"><svg class="sector-donut" viewBox="0 0 144 144" role="img" aria-label="Sector exposure donut chart including an undisclosed-sector bucket"><circle cx="72" cy="72" r="'+radius+'" fill="none" stroke="#edf1f4" stroke-width="19"/>'+slices.map(x=>x.circle).join('')+'<text x="72" y="67" text-anchor="middle" font-size="10" font-weight="800" fill="#748295">PARSED</text><text x="72" y="81" text-anchor="middle" font-size="11" font-weight="850" fill="#26394e">EQUITY</text></svg><ul class="sector-legend">'+legend+'</ul></div><div class="metric-caption">Donut slices show each reported sector plus the explicit “Sector not disclosed” bucket as a share of parsed listed-equity weights. The smaller NAV figures show each bucket’s allocation-weighted contribution to the hypothetical portfolio. Debt, cash, derivatives and other excluded non-equity rows are not shown. This is not the full scheme portfolio’s sector allocation.</div>';
 }
+function renderPortfolioAnalysis(){
 function renderPortfolioAnalysis(){
  const root=$('overlapAnalysis');
  const loaded=state.portfolioFunds.filter(f=>f.status==='ready'&&f.data);
@@ -1059,11 +1076,16 @@ function renderPortfolioAnalysis(){
  const dates=loaded.map(f=>f.data.asOf).filter(Boolean);
  const earliest=dates.slice().sort()[0],latest=dates.slice().sort().at(-1);
  const dateGap=daysBetweenIso(earliest,latest);
- const stale=loaded.filter(f=>f.data.stale);
+ const stale=loaded.filter(f=>f.data.stale===true||f.data.ageDays===null||f.data.ageDays===undefined||!Number.isFinite(Number(f.data.ageDays))||Number(f.data.ageDays)>45);
+ if(stale.length){
+  root.innerHTML='<div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Only recent AMC portfolio disclosures are eligible for combined calculations.</p></div></div><div class="warning-box">Analysis withheld because '+stale.length+' selected disclosure(s) are older than 45 days or have no validated age: '+stale.map(f=>escapeHtml(f.name)+' ('+escapeHtml(f.data.asOf||'date unavailable')+', '+escapeHtml(String(f.data.ageDays??'age unknown'))+' days old)').join(' · ')+'. Remove the stale scheme or use Refresh selected after a newer AMC workbook is published.</div>';
+  return;
+ }
  if(dateGap>45){
   root.innerHTML='<div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Holdings must refer to comparable reporting periods.</p></div></div><div class="warning-box">Analysis withheld: the validated portfolio snapshots span '+dateGap+' days ('+earliest+' to '+latest+'). FundLens requires all selected holdings dates to be within 45 days before comparing weights. Refresh later or select schemes with aligned disclosures.</div>';
   return;
  }
+ const pairs=portfolioPairs(loaded);
  const pairs=portfolioPairs(loaded);
  const allocations=portfolioAllocations(loaded);
  const allocNote=allocations?'Hypothetical scheme allocations normalized to 100%.':'Allocation weights must sum to more than zero.';
@@ -1094,7 +1116,7 @@ function renderPortfolioAnalysis(){
   (errors.length?'<div class="warning-box">'+errors.length+' selected scheme(s) could not be included because validated public holdings were unavailable. Results below include only the '+loaded.length+' successfully validated scheme(s).</div>':'')+
   (stale.length?'<div class="warning-box">At least one disclosure is older than 45 days. Results are historical snapshots, not current holdings. Review each source date before interpreting overlap.</div>':'')+
   '<div class="overlap-kpis"><div class="overlap-kpi"><span>Highest pairwise overlap</span><strong>'+fmtNum(overlapTop,2)+'%</strong><small>Conservative min-weight method</small></div><div class="overlap-kpi"><span>Common securities</span><strong>'+commonAcross+'</strong><small>Held by at least two selected schemes</small></div><div class="overlap-kpi"><span>Selected schemes</span><strong>'+loaded.length+'</strong><small>With validated holdings files</small></div><div class="overlap-kpi"><span>Unique securities</span><strong>'+stocks.length+'</strong><small>ISIN-matched across selected funds</small></div></div>'+
-  '<div class="overlap-visuals"><section class="overlap-visual-card"><div class="card-head"><div><div class="card-title">Fund-to-fund overlap heatmap</div><div class="card-sub">Compare the shared listed-equity exposure across every selected fund pair.</div></div><span class="tag">PAIRWISE</span></div>'+overlapHeatmapMarkup(loaded,pairs)+'</section><section class="overlap-visual-card"><div class="card-head"><div><div class="card-title">Combined exposure by sector</div><div class="card-sub">Allocation-weighted sector mix across the selected schemes.</div></div><span class="tag">DONUT</span></div>'+sectorDonutMarkup(sectors)+'</section></div>'+
+Allocation-weighted mix of reported sectors and undisclosed-sector holdings.
   '<div class="overlap-two"><div><div class="card" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Pairwise portfolio overlap</div><div class="card-sub">Sum of the lower of the two schemes’ NAV weights for each matching ISIN.</div></div></div><div class="table-scroll"><table class="overlap-table"><thead><tr><th>Scheme pair</th><th>Overlap</th><th>Shared securities</th></tr></thead><tbody>'+pairRows+'</tbody></table></div></div>'+
   '<div class="card section-gap" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Common securities behind the overlap</div><div class="card-sub">Top 20 shared positions by overlap contribution. Each weight is a percentage of the respective scheme NAV.</div></div></div><div class="table-scroll"><table class="overlap-table"><thead><tr><th>Scheme pair</th><th>Security / ISIN</th><th>Weight A</th><th>Weight B</th><th>Contribution</th></tr></thead><tbody>'+(commonRows||'<tr><td colspan="5">No common ISINs were found for the selected schemes.</td></tr>')+'</tbody></table></div></div>'+
   '<div class="card section-gap" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Sector exposure</div><div class="card-sub">Weighted contribution to selected-fund portfolio NAV.</div></div></div><div class="table-scroll"><table><thead><tr><th>Sector</th><th>Exposure</th></tr></thead><tbody>'+sectorRows+'</tbody></table></div></div></div>'+
