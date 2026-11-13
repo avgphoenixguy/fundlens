@@ -256,13 +256,13 @@ function parsePortfolio(buf) {
     const normalized = values.map(headerNorm);
     const hasIsin = normalized.some(v => v === "isin" || v.startsWith("isin "));
     const hasName = normalized.some(v => /instrument|security|company|issuer|stock|scrip|particulars|name of/.test(v));
-    const hasWeight = normalized.some(v => /^(?:%?\\s*to\\s*(?:net assets|nav)|percentage\\s*to\\s*(?:net assets|nav)|(?:net assets|portfolio)\\s*(?:%|weight)|weight)$/.test(v));
+    const hasWeight = normalized.some(v => /^(?:%?\s*to\s*(?:net assets|nav)|percentage\s*to\s*(?:net assets|nav)|(?:net assets|portfolio)\s*(?:%|weight)|weight)$/.test(v));
     if (hasIsin && hasName && hasWeight) { headerAt = i; headers = values; break; }
   }
   if (headerAt < 0) throw new Error("Workbook layout could not be validated: expected instrument name, ISIN and % to NAV columns");
   const nameCol = findHeader(headers, h => /^(name of the instrument|name of instrument|instrument name|security name|company name|issuer name|scrip name|stock name|particulars|name)$/.test(h) || /^(name of the instrument|instrument name|security description)/.test(h));
   const isinCol = findHeader(headers, h => h === "isin" || h === "isin no" || h === "isin number" || h.startsWith("isin "));
-  const weightCol = findHeader(headers, h => /^(?:%?\\s*to\\s*(?:net assets|nav)|percentage\\s*to\\s*(?:net assets|nav)|(?:net assets|portfolio)\\s*(?:%|weight)|weight)$/.test(h));
+  const weightCol = findHeader(headers, h => /^(?:%?\s*to\s*(?:net assets|nav)|percentage\s*to\s*(?:net assets|nav)|(?:net assets|portfolio)\s*(?:%|weight)|weight)$/.test(h));
   const sectorCol = findHeader(headers, h => /^(industry|sector|industry name|sector name|industry rating)$/.test(h));
   const typeCol = findHeader(headers, h => /^(asset class|instrument type|security type|type)$/.test(h));
   if (nameCol < 0 || isinCol < 0 || weightCol < 0) throw new Error("Workbook columns are not sufficiently explicit to calculate holdings overlap");
