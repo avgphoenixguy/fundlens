@@ -1,7 +1,7 @@
 // Automatic AMC holdings retrieval for FundLens.
 // Fetches public month-end workbook disclosures. No investor uploads are accepted.
 // Initial verified adapters: PPFAS and HDFC Mutual Fund. Unsupported AMCs fail closed.
-const zlib = require("zlib");
+const zlib = require("node:zlib");
 
 const AMC_SOURCES = {
   ppfas: {
