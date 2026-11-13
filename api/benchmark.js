@@ -113,7 +113,7 @@ async function fetchChunk(index,start,end) {
       if(!response.ok)throw new Error("HTTP "+response.status+" ("+contentType+")");
       let raw;
       try{raw=JSON.parse(text)}catch(e){
-        const hint=text.trim().slice(0,110).replace(/\\s+/g," ");
+        const hint=text.trim().slice(0,110).replace(/\s+/g," ");
         const challenge=/cloudflare|akamai|access denied|captcha|bot detection|request blocked/i.test(hint+" "+text.slice(0,1600));
         throw new Error(
           (challenge?"upstream bot protection returned HTML":"upstream returned HTML / non-JSON")+
