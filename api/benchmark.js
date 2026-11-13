@@ -93,7 +93,8 @@ function findManifestResource(manifest, datasetKey) {
   return [...new Set(found)][0] || null;
 }
 function safeTipsheetUrl(path) {
-  const url = new URL(path, DATA_BASE);
+  // Manifest file addresses are relative to /data/v1/manifest.json, not the domain root.
+  const url = new URL(path, MANIFEST_URL);
   if (url.protocol !== "https:" || !["tipsheet.markets", "www.tipsheet.markets"].includes(url.hostname.toLowerCase())) {
     throw new Error("The Tipsheet manifest returned a URL outside the approved Tipsheet domain.");
   }
