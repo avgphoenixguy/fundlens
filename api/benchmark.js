@@ -154,13 +154,13 @@ function collectSeries(node, path, inheritedMeta, out, depth) {
   if (Array.isArray(node.dates) && node.series && typeof node.series === "object" && !Array.isArray(node.series)) {
     for (const [seriesName, values] of Object.entries(node.series)) {
       if (Array.isArray(values) && values.length === node.dates.length) {
-        const label = String(seriesName || "");
-        const isPrice = /price|capital gain|price return/i.test(label);
-        const isTotalReturn = /total[ _-]*return|\btri\b/i.test(label);
+        const rawLabel = String(seriesName || "").trim();
+        const isPrice = /price|capital gain|price return/i.test(rawLabel) || /^pr$/i.test(rawLabel);
+        const isTotalReturn = /total[ _-]*return|\\btri\\b/i.test(rawLabel) || /^tr$/i.test(rawLabel);
         if (isTotalReturn && !isPrice) {
           out.push({
             path: path.join("/"),
-            label,
+            label: /^tr$/i.test(rawLabel) ? "Total Return (TR)" : rawLabel,
             dates: node.dates,
             values,
             meta,
