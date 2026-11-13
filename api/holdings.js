@@ -297,7 +297,7 @@ function parsePortfolio(buf) {
     }
   }
   const out = [...deduped.values()].sort((a, b) => b.weightPct - a.weightPct);
-  if (!out.length) throw new Error("No listed-equity holdings with validated ISINs and weights were found in the workbook. Debt-only schemes are not eligible for stock overlap.");
+  if (!out.length) throw Object.assign(new Error("No listed-equity holdings with validated ISINs and weights were found in this workbook. Debt-only schemes are not eligible for stock overlap."), { status: 422 });
   if (out.some(h => h.weightPct > 100)) throw new Error("A security's aggregated weight exceeded 100% of scheme NAV. Workbook was rejected.");
   const equityCoveragePct = out.reduce((s, h) => s + h.weightPct, 0);
   if (!Number.isFinite(equityCoveragePct) || equityCoveragePct > 105) throw new Error("Parsed listed-equity weights exceed 105% of scheme NAV. Workbook was rejected for review.");
