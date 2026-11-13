@@ -34,7 +34,7 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - Proxy: yield on 6.94% GS 2036, the long-dated Government of India security closest to 10 years to maturity in the current RBI table.
 - Current verified observation: 7.2430% with yield date 12 November 2026, as returned by the RBI page fetched on 13 November 2026.
 - Fallback: if the live RBI page is unavailable or the table structure changes, the app returns 7.2178% dated 11 November 2026 and visibly labels it as a fallback snapshot.
-- Calculation: annual yield / 252 is used as the daily risk-free proxy and held constant across the selected historical NAV sample. It is not a daily historical risk-free curve.
+- Calculation: the annual yield is converted to an effective daily rate using (1 + annual_yield)^(1/252) - 1 for daily NAV-only metrics, and an effective weekly rate using (1 + annual_yield)^(1/52) - 1 for weekly benchmark regression. The chosen current yield is held constant across the selected historical NAV sample. It is not a daily historical risk-free curve.
 - Usage: Sharpe and Alpha use it as the excess-return rate. Sortino uses the same rate as the downside target.
 - Caveat: a long-dated G-Sec yield is an opportunity-cost proxy, not a universally correct risk-free rate for every period or category. A duration-matched short-term sovereign rate could be better for some debt funds.
 
