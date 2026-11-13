@@ -16,7 +16,7 @@ The observed compact series keys include tr (Total Return), pr (Price Return), d
 
 The scheme's AMFI benchmark mapping determines the requested index. The response is sorted, duplicate dates are removed, and fund NAV / benchmark observations are joined on exact dates only. FundLens does not forward-fill, interpolate or replace a missing TRI observation with a price-index value. CRISIL and schemes without a verified Nifty mapping are not automatically mapped.
 
-A minimum of 30 matched weekly return observations is a software display threshold, not a claim that 30 weeks is enough for robust inference. Multi-year, like-for-like periods are preferable. Both scheme and benchmark must be observed on the same dates. The current GitHub connector has been updated for the published series schema, but the latest Netlify production deployment has not yet been verified; benchmark calculations remain unavailable until validated weekly observations are loaded.
+A minimum of 30 matched weekly return observations is a software display threshold, not a claim that 30 weeks is enough for robust inference. Multi-year, like-for-like periods are preferable. Both scheme and benchmark must be observed on the same dates. The Cloudflare Worker routes `/api/benchmark` to the published-series parser. Benchmark calculations are withheld whenever the route cannot return validated weekly observations or exact-date NAV matches are insufficient.
 
 Sources:
 - [Tipsheet public data catalogue](https://tipsheet.markets/data/)
@@ -116,7 +116,7 @@ The UTI sample register, for example, warns that reported return data is Regular
 
 ## 7. Limitations and production requirements
 
-The AMFI Fund Performance API supplies scheme-specific benchmark names, AUM, Riskometer, official plan-specific IR and trailing scheme / benchmark performance when a scheme-name match is found. The AMFI monthly TER workbook supplies plan-specific full TER when a matching record is available. The app does not have automatic YTM, duration or credit-quality integration for every scheme. The benchmark connector now targets Tipsheet's published weekly NSE TRI-derived series, selecting only tr and excluding pr; the latest parser is committed in GitHub but has not yet been verified in the paused Netlify production deployment. Weekly benchmark-dependent Alpha / Beta / calculated IR / tracking error remain unavailable until validated weekly observations are loaded.
+The AMFI Fund Performance API supplies scheme-specific benchmark names, AUM, Riskometer, official plan-specific IR and trailing scheme / benchmark performance when a scheme-name match is found. The AMFI monthly TER workbook supplies plan-specific full TER when a matching record is available. The app does not have automatic YTM, duration or credit-quality integration for every scheme. The benchmark connector targets Tipsheet's published weekly NSE TRI-derived series, selecting only `tr` and excluding `pr`. The Cloudflare Worker exposes this connector at `/api/benchmark`; weekly benchmark-dependent Alpha / Beta / calculated IR / tracking error remain unavailable unless the returned series validates and matches NAV dates exactly.
 
 A production build should:
 1. Verify the weekly Tipsheet / NSE TRI-derived connector end-to-end after deployment, and confirm data-use and index licensing rights before any commercial use.
