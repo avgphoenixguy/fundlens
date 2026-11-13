@@ -40,11 +40,15 @@ FundLens has no user-facing upload controls. The application requests scheme and
 
 ## 5. Benchmark TRI
 
-- Scheme mapping: current AMFI benchmark name is retrieved automatically when available.
-- Intended history source: NSE Indices Historical Data Reports, Total Returns Index Values.
-- Implementation: FundLens requests daily TRI through a cached Vercel /api/benchmark route for supported Nifty benchmark names.
-- Current limitation: NSE historical-data requests return HTML challenge responses from the Vercel serverless environment. Consequently, Alpha, Beta, FundLens-calculated IR, tracking error, benchmark CAGR and benchmark-relative rolling outcomes are suppressed when no matched daily TRI is received.
-- No price-index substitution is used. AMFI-reported trailing benchmark performance and official IR remain available from the AMFI Fund Performance API even when daily TRI history is not.
+- Scheme mapping: the current AMFI benchmark name is retrieved automatically when a sufficiently close scheme record is found.
+- Published history source: Tipsheet's public indices/p dataset family, which Tipsheet documents as the weekly series used by its NSE index pages.
+- Underlying index source: NSE Indices Total Return Index data, with dividends reinvested. Tipsheet documents repairs of identified anomalous TRI prints against the corresponding price index. This is a source-level data correction; FundLens does not use the full price-return series as a substitute.
+- Dataset shape: Tipsheet's public data catalogue describes series JSON using ISO dates, a series map, resolution and metadata. The observed compact series keys include tr (Total Return), pr (Price Return), dd, vol, r3 and r5.
+- Selection rule: FundLens selects only tr, explicitly excludes pr and other non-return fields, and checks that observation spacing is weekly.
+- Output: rebased growth-of-100 observations, not raw NSE index levels. FundLens does not use Tipsheet's separate model indices.
+- Matching: scheme NAV and benchmark values are joined on exact dates only. There is no forward-fill, interpolation or price-index substitution.
+- Current verification state: the latest parser and source-path fixes are committed in GitHub. They have not been verified in the Netlify production deployment because the latest deployment is paused. Until a deployed endpoint returns validated weekly observations and sufficient exact-date matches, benchmark-dependent FundLens calculations remain unavailable.
+- Official AMFI trailing benchmark returns and plan-specific IR are separate published disclosures. They do not supply the weekly observations used by FundLens regression metrics.
 
 ## 6. Automatic AMC portfolio holdings
 
@@ -73,9 +77,9 @@ FundLens has no user-facing upload controls. The application requests scheme and
 | AMFI trailing fund / benchmark returns | AMFI Fund Performance API | Automatic when report value is available |
 | AUM / Riskometer / benchmark name | AMFI Fund Performance API | Automatic when scheme match is available |
 | Direct / Regular TER | AMFI monthly TER workbook | Automatic when scheme match is available |
-| Alpha / Beta | NAV + matched daily benchmark TRI + RBI proxy for Alpha | Not available while NSE TRI requests are blocked |
-| Calculated IR / tracking error | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
-| Benchmark-relative rolling outcomes | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
+| Alpha / Beta | NAV + exact-date-matched weekly TRI-derived benchmark + weekly RBI proxy for Alpha | Code committed; live deployment verification pending |
+| Calculated IR / tracking error | NAV + matched weekly TRI-derived benchmark | Code committed; live deployment verification pending |
+| Benchmark-relative rolling outcomes | NAV + matched weekly TRI-derived benchmark | Code committed; live deployment verification pending |
 | Listed-equity holdings / stock overlap | PPFAS and HDFC public scheme workbooks + exact ISIN matching | Automatic for validated PPFAS / HDFC workbooks; other AMCs unavailable |
 | YTM / modified duration / credit quality | AMC / scheme portfolio disclosures | Not automatically integrated; not inferred from NAV or equity holdings |
 
@@ -85,7 +89,11 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - AMFI Fund Performance page: https://www.amfiindia.com/polling/amfi/fund-performance
 - AMFI monthly TER workbook endpoint: https://www.amfiindia.com/api/populate-te-rdata-revised
 - AMFI Total TER disclosure page: https://www.amfiindia.com/ter
+- Tipsheet public data catalogue: https://tipsheet.markets/data/
+- Tipsheet index-page method (weekly NSE index series): https://tipsheet.markets/methods/index_pages/
+- Tipsheet TRI repair method: https://tipsheet.markets/methods/indices/
 - NSE Indices historical data reports: https://www.niftyindices.com/reports/historical-data
+- NSE Total Returns Index explanation: https://www.nseindia.com/static/products-services/indices-total-returns-index
 - RBI Current Rates: https://www.rbi.org.in/?id=10395
 - PPFAS monthly Portfolio Disclosure: https://amc.ppfas.com/downloads/portfolio-disclosure/index.php
 - HDFC monthly portfolio disclosure: https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio
