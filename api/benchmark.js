@@ -18,7 +18,7 @@ function fromIso(iso) {
 }
 function toIso(d) { return d.toISOString().slice(0,10); }
 function fmtDate(d) {
-  return String(d.getUTCDate()).padStart(2,"0") + "-" + MONTHS[d.getUTCMonth()] + "-" + d.getUTCFullYear();
+  return String(d.getUTCDate()).padStart(2,"0") + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear();
 }
 function addDays(d,n) { const x=new Date(d);x.setUTCDate(x.getUTCDate()+n);return x; }
 function parseRows(raw) {
