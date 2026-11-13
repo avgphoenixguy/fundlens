@@ -47,7 +47,7 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - Selection rule: FundLens selects only tr, explicitly excludes pr and other non-return fields, and checks that observation spacing is weekly.
 - Output: rebased growth-of-100 observations, not raw NSE index levels. FundLens does not use Tipsheet's separate model indices.
 - Matching: scheme NAV and benchmark values are joined on exact dates only. There is no forward-fill, interpolation or price-index substitution.
-- Current verification state: the latest parser and source-path fixes are committed in GitHub. They have not been verified in the Netlify production deployment because the latest deployment is paused. Until a deployed endpoint returns validated weekly observations and sufficient exact-date matches, benchmark-dependent FundLens calculations remain unavailable.
+- Hosting state (13 Nov 2026): Cloudflare Workers is the canonical deployment target. The repository now includes `wrangler.jsonc` and `cloudflare/worker.js` to route API requests to the existing handlers. After deployment, verify `/api/health`, then confirm the benchmark route returns validated weekly observations and sufficient exact-date matches before relying on benchmark-dependent calculations.
 - Official AMFI trailing benchmark returns and plan-specific IR are separate published disclosures. They do not supply the weekly observations used by FundLens regression metrics.
 
 ## 6. Automatic AMC portfolio holdings
