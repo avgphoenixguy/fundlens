@@ -280,11 +280,11 @@ body.studio-open .app-shell{display:block}
      <details><summary>Sharpe ratio</summary><p>Annualised mean daily scheme return less the daily risk-free assumption, divided by daily standard deviation, then multiplied by √252. Higher is not automatically better across different categories or periods.</p></details>
      <details><summary>Sortino ratio</summary><p>Annualised mean excess return divided by downside deviation. Downside deviation uses daily returns below the configured target rate. The target assumption must be disclosed.</p></details>
      <details><summary>Alpha and Beta</summary><p>Beta is covariance of scheme and benchmark daily returns divided by benchmark variance. Alpha is the annualised daily CAPM intercept after the configured risk-free assumption. Results depend on benchmark and sample period.</p></details>
-     <details><summary>Information Ratio</summary><p>For equity-oriented schemes, daily arithmetic excess return divided by the standard deviation of daily arithmetic excess returns, using the Tier 1 benchmark. The SEBI circular does not prescribe a √252 multiplier in this formula. This prototype estimate is not the AMC / AMFI reported IR.</p></details>
+     <details><summary>Information Ratio</summary><p>When available, FundLens displays the official AMFI-reported Information Ratio for the selected scheme plan and reporting period. Separately, when matched daily benchmark TRI is available, FundLens can calculate a research estimate as mean daily arithmetic active return divided by the sample standard deviation of daily active returns, multiplied by √252. The research estimate is not interchangeable with the official AMFI figure.</p></details>
      <details><summary>Tracking error and difference</summary><p>Tracking error is annualised volatility of daily active returns. Tracking difference is scheme performance less benchmark performance over the same matched period. These are central for index funds.</p></details>
      <details><summary>Rolling returns</summary><p>Each eligible NAV date becomes a start date. The engine finds the first available observation on or after the holding-window target date. Adjacent windows overlap and are not independent observations.</p></details>
     </div>
-    <div class="metric-caption">Annualisation uses 252 trading days for volatility, Sharpe, Sortino, Alpha and tracking error. The Information Ratio uses daily arithmetic active returns and an annualised estimate (√252); it is shown only for equity-oriented schemes. Reconcile with AMC / AMFI-reported IR before regulatory comparison. Exact-date TRI matches only, no forward-fill. Sources: <a class="source-link" href="https://www.sebi.gov.in/legal/circulars/jan-2025/disclosure-of-risk-adjusted-return-information-ratio-ir-for-mutual-fund-schemes-_90928.html" target="_blank" rel="noopener">SEBI circular ↗</a> · <a class="source-link" href="https://www.amfiindia.com/otherdata/fund-performance/information-ratio" target="_blank" rel="noopener">AMFI IR explainer ↗</a>. Full formulas and caveats are in the repository methodology note.</div>
+    <div class="metric-caption">Annualisation uses 252 trading days for NAV volatility, Sharpe, Sortino, FundLens Alpha and tracking error estimates. The current RBI 10-year G-Sec yield is used as a constant proxy, not as a daily maturity-matched risk-free curve. FundLens daily IR estimate uses √252; official AMFI IR is displayed separately when supplied. Exact-date TRI matches only, no forward-fill. Formula choice does not generate benchmark observations: daily Alpha, Beta, tracking error, FundLens IR and benchmark-relative rolling outcomes remain unavailable until the mapped TRI series is retrieved.</div>
    </div>
    
 
@@ -370,7 +370,7 @@ body.studio-open .app-shell{display:block}
      </div>
     </div>
     <div class="note-box"><b>Methodology.</b> For every eligible NAV date, the engine finds the first available NAV on or after the date shifted by the selected number of calendar months. It computes the holding-period return as end NAV ÷ start NAV − 1. CAGR mode annualises that return over the selected calendar window. Daily, weekly and monthly frequencies change the spacing of start dates, not the return endpoints. Overlapping windows are not independent observations.</div>
-    <div class="warning-box"><b>Important limitation.</b> This rolling lab currently calculates scheme-only NAV returns until a matched benchmark TRI is imported in Advanced view. We will not compare against a price index or fabricate benchmark observations.</div>
+    <div class="warning-box"><b>Benchmark data limitation.</b> FundLens attempts to retrieve the mapped benchmark TRI automatically. The current NSE TRI connection may return an unavailable response. When that happens, rolling benchmark comparisons are withheld. No manual upload is required or supported, and a price index is never substituted.</div>
 
    <div class="panel-box advanced-only" id="relativeRolling">
     <div class="panel-heading"><div><h3>Benchmark-relative rolling outcomes</h3><p>For each common start date, compare the scheme's holding-period CAGR with the matched benchmark TRI CAGR.</p></div><span class="tag amber">SAME-DATE TRI REQUIRED</span></div>
@@ -379,16 +379,16 @@ body.studio-open .app-shell{display:block}
      <div class="metric-card"><div class="m-label">Median excess CAGR</div><div class="m-value" id="relativeMedian">Unavailable</div><div class="m-note">Fund CAGR less benchmark CAGR</div></div>
      <div class="metric-card"><div class="m-label">Matched windows</div><div class="m-value" id="relativeCount">0</div><div class="m-note">Same start and end dates for fund and benchmark</div></div>
     </div>
-    <div class="chart-wrap" id="relativeRollingChart"><div class="empty">Load a matched benchmark TRI CSV in Advanced view.</div></div>
-    <div class="data-status warn" id="relativeRollingStatus">This analysis uses the full available matched history, independently of the Advanced scorecard's 1Y / 3Y / 5Y / 10Y / Max period selector. A price index is not a valid substitute for TRI.</div>
+    <div class="chart-wrap" id="relativeRollingChart"><div class="empty">Waiting for automatic matched-date benchmark TRI retrieval. No upload is required.</div></div>
+    <div class="data-status warn" id="relativeRollingStatus">This analysis uses the full available matched history, independently of the Advanced scorecard period selector. Exact-date TRI observations are required. A price index or AMFI trailing-return snapshot is not a substitute.</div>
    </div>
    </div>
   </section>
 
   <section class="panel" id="page-compare">
-   <div class="page-head"><div><div class="eyebrow">SIDE-BY-SIDE RESEARCH</div><h1>Compare funds</h1><p>Build a like-for-like comparison of up to three schemes with comparable NAV history.</p></div><button class="btn" id="compareAddFund">＋ Add another fund</button></div>
+   <div class="page-head"><div><div class="eyebrow">SIDE-BY-SIDE RESEARCH</div><h1>Compare funds</h1><p>Build a like-for-like comparison of up to three schemes. FundLens checks category sub-type, plan, option and AMFI benchmark before adding another scheme.</p></div><div class="head-actions"><button class="btn" id="exportComparison" type="button">Export CSV ↓</button><button class="btn" id="compareAddFund">＋ Add another fund</button></div></div>
    <div class="card">
-    <div class="card-head"><div><div class="card-title">Comparison set</div><div class="card-sub">Choose up to three schemes. Keep category and plan differences in mind.</div></div><span class="tag" id="compareCount">0 / 3 SELECTED</span></div>
+    <div class="card-head"><div><div class="card-title">Comparison set</div><div class="card-sub">Up to three schemes. A second scheme is accepted only when its sub-category, plan, option and disclosed benchmark match the existing set.</div></div><span class="tag" id="compareCount">0 / 3 SELECTED</span></div>
     <div class="compare-tray" id="compareTray"><span class="muted">Add a fund from the universe or current selection.</span></div>
     <div class="table-scroll section-gap"><table><thead id="compareHead"><tr><th>Metric</th></tr></thead><tbody id="compareBody"><tr><td class="muted">No funds selected.</td></tr></tbody></table></div>
     <div class="grid two section-gap">
@@ -485,6 +485,43 @@ const referenceDisclosure={
 };
 function classifyScheme(meta,name){const s=((meta?.scheme_category||'')+' '+(meta?.scheme_name||name||'')).toLowerCase();if(/liquid|overnight|money market|ultra short|low duration|short duration|corporate bond|gilt|banking.?psu|credit risk|dynamic bond|floater|debt fund/.test(s))return'debt';if(/hybrid|balanced advantage|aggressive hybrid|conservative hybrid|multi asset|arbitrage/.test(s))return'hybrid';if(/index|etf|nifty|sensex|bse 500|index fund/.test(s))return'index';return'equity'}
 function categoryName(meta,name){return meta?.scheme_category||({equity:'Equity fund',debt:'Debt fund',hybrid:'Hybrid fund',index:'Index / passive fund'}[classifyScheme(meta,name)])}
+
+function schemeSubcategory(meta,name){
+ const raw=String(meta?.scheme_category||'').toLowerCase();
+ const combined=(raw+' '+String(name||'')).toLowerCase();
+ const patterns=[
+  ['equity:flexi-cap',/flexi\s*cap/],['equity:large-and-mid-cap',/large\s*(?:&|and)\s*mid\s*cap/],
+  ['equity:multi-cap',/multi\s*cap/],['equity:large-cap',/large\s*cap/],['equity:mid-cap',/mid\s*cap/],
+  ['equity:small-cap',/small\s*cap/],['equity:focused',/focused/],['equity:value',/value\s*fund/],
+  ['equity:contra',/contra/],['equity:elss',/elss|tax\s*saver/],['equity:sectoral-thematic',/sectoral|thematic/],
+  ['hybrid:conservative',/conservative\s*hybrid/],['hybrid:aggressive',/aggressive\s*hybrid/],
+  ['hybrid:balanced-advantage',/balanced\s*advantage|dynamic\s*asset\s*allocation/],['hybrid:multi-asset',/multi\s*asset/],
+  ['hybrid:equity-savings',/equity\s*savings/],['hybrid:arbitrage',/arbitrage/],
+  ['debt:overnight',/overnight/],['debt:liquid',/\bliquid\b/],['debt:money-market',/money\s*market/],
+  ['debt:ultra-short',/ultra\s*short/],['debt:low-duration',/low\s*duration/],['debt:short-duration',/short\s*duration/],
+  ['debt:corporate-bond',/corporate\s*bond/],['debt:banking-psu',/banking\s*(?:and|&)\s*psu/],
+  ['debt:gilt',/gilt/],['debt:dynamic-bond',/dynamic\s*bond/],['debt:credit-risk',/credit\s*risk/],
+  ['debt:medium-duration',/medium\s*duration/],['debt:long-duration',/long\s*duration/],
+  ['passive:index',/index\s*(?:fund)?|\betf\b/]
+ ];
+ for(const [key,re] of patterns)if(re.test(combined))return key;
+ const cleaned=raw.replace(/open ended schemes|close ended schemes|interval schemes|equity scheme|debt scheme|hybrid scheme|other scheme|fund/g,' ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+ return cleaned||'subcategory:unclassified';
+}
+function optionForScheme(name){
+ const s=String(name||'').toLowerCase();
+ if(/idcw|dividend|payout|reinvest(?:ment)?/.test(s))return'idcw';
+ if(/growth/.test(s))return'growth';
+ return'option:unclassified';
+}
+function normalizedBenchmark(name){
+ return String(name||'').toLowerCase().replace(/total\s*returns?\s*index|total\s*return\s*index|\btri\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+}
+function compareIdentity(item,disclosure){
+ const name=item.meta?.scheme_name||item.meta?.schemeName||'';
+ return {subcategory:schemeSubcategory(item.meta,name),plan:planForScheme(name),option:optionForScheme(name),benchmark:normalizedBenchmark(disclosure?.performance?.benchmark||''),benchmarkLabel:disclosure?.performance?.benchmark||''};
+}
+
 function setBenchmarkDefault(){
  const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
  const el=$('benchmarkName');
@@ -1025,63 +1062,35 @@ let searchTimer; $('universeSearch').addEventListener('input',e=>{clearTimeout(s
 document.querySelectorAll('[data-plan]').forEach(b=>b.addEventListener('click',()=>{state.searchPlan=b.dataset.plan;document.querySelectorAll('[data-plan]').forEach(x=>x.classList.toggle('active',x===b));drawSearchResults(state.search)}));
 function drawPicks(){$('popularPicks').innerHTML=seeds.map(x=>'<button class="pick" data-pick="'+x.code+'">'+x.name.replace(' - Direct Plan - Growth','').replace(' - Direct Plan - Growth Option','')+'</button>').join('');$('popularPicks').querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{state.pendingCode=Number(b.dataset.pick);loadScheme(state.pendingCode)}))}
 $('loadSelected').addEventListener('click',()=>{if(state.pendingCode)loadScheme(state.pendingCode);else toast('Choose a scheme from search first.')});
-function addCompare(code){
- code=Number(code);if(state.compare.includes(code))return toast('This scheme is already in your comparison.');if(state.compare.length>=3)return toast('You can compare up to three schemes.');state.compare.push(code);renderCompare();toast('Scheme added to comparison.');
-}
-function removeCompare(code){state.compare=state.compare.filter(x=>x!==code);renderCompare()}
-async function ensureCompare(code){if(code===state.code)return {code,meta:state.meta,data:state.data};const cached=state.cache.get(Number(code));if(cached)return {code,meta:cached.meta,data:cached.data};try{const r=await fetch(API+'/'+code);if(!r.ok)throw new Error('NAV request failed');const b=await r.json();const d=(b.data||[]).map(x=>({date:parseDate(x.date),nav:Number(x.nav)})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.nav)&&x.nav>0).sort((a,b)=>a.date-b.date);const value={meta:b.meta||{},data:d};state.cache.set(Number(code),value);return {code,meta:value.meta,data:value.data}}catch(e){return {code,meta:{scheme_name:'Scheme '+code},data:[]}}}
-async function ensureAmfiForCompare(item){
- const cacheKey=String(item.code);
- if(state.amfiCompareCache.has(cacheKey))return state.amfiCompareCache.get(cacheKey);
- const name=item.meta?.scheme_name||item.meta?.schemeName||('Scheme '+item.code);
- const category=item.meta?.scheme_category||'';
- const categoryId=amfiCategoryForScheme(item.meta,name);
- const plan=planForScheme(name);
- const q='/api/amfi-performance?name='+encodeURIComponent(name)+'&schemeCategory='+encodeURIComponent(category)+'&category='+encodeURIComponent(categoryId||'')+'&plan='+encodeURIComponent(plan);
- const terQ='/api/amfi-ter?name='+encodeURIComponent(name)+'&plan='+encodeURIComponent(plan);
- const [performance,ter]=await Promise.all([
-  fetch(q,{headers:{'Accept':'application/json'}}).then(async r=>{const x=await r.json();return r.ok?x:null}).catch(()=>null),
-  fetch(terQ,{headers:{'Accept':'application/json'}}).then(async r=>{const x=await r.json();return r.ok?x:null}).catch(()=>null)
- ]);
- const result={performance,ter,plan};
- state.amfiCompareCache.set(cacheKey,result);
- return result;
-}
-async function renderCompare(){
- $('compareCount').textContent=state.compare.length+' / 3 SELECTED';
- $('compareTray').innerHTML=state.compare.length?state.compare.map(c=>'<span class="compare-item">'+c+' <button class="remove" data-remove="'+c+'">×</button></span>').join(''):'<span class="muted">Add a fund from the universe or current selection.</span>';
- $('compareTray').querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>removeCompare(Number(b.dataset.remove))));
- if(!state.compare.length){$('compareHead').innerHTML='<tr><th>Metric</th></tr>';$('compareBody').innerHTML='<tr><td class="muted">No funds selected.</td></tr>';$('compareChart').innerHTML='<div class="empty">Add funds to compare.</div>';$('compareRisk').textContent='Add funds to compare.';return}
- $('compareBody').innerHTML='<tr><td colspan="'+(state.compare.length+1)+'" class="muted">Loading NAV and AMFI disclosures for selected schemes…</td></tr>';
- const items=await Promise.all(state.compare.map(ensureCompare));
- const labels=items.map(x=>x.meta.scheme_name||x.meta.schemeName||('Scheme '+x.code));
- const disclosures=await Promise.all(items.map(ensureAmfiForCompare));
- const amfiByCode=new Map(items.map((x,i)=>[String(x.code),disclosures[i]||{}]));
- const periodKey=({'12':'1Y','36':'3Y','60':'5Y','120':'10Y'})[$('analysisPeriod')?.value]||'';
- const metrics=[
-  ['Latest NAV',x=>x.data.length?money(x.data[x.data.length-1].nav):'N/A'],
-  ['1Y CAGR (NAV)',x=>{const t=trailing(x.data,12);return t?fmtPct(t.cagr):'N/A'}],
-  ['3Y CAGR (NAV)',x=>{const t=trailing(x.data,36);return t?fmtPct(t.cagr):'N/A'}],
-  ['5Y CAGR (NAV)',x=>{const t=trailing(x.data,60);return t?fmtPct(t.cagr):'N/A'}],
-  ['Annualised volatility',x=>fmtPct(navRiskFor(x.data).vol)],
-  ['Sharpe ratio*',x=>Number.isFinite(navRiskFor(x.data).sharpe)?fmtNum(navRiskFor(x.data).sharpe,2):'N/A'],
-  ['Sortino ratio*',x=>Number.isFinite(navRiskFor(x.data).sortino)?fmtNum(navRiskFor(x.data).sortino,2):'N/A'],
-  ['AMFI benchmark',x=>amfiByCode.get(String(x.code))?.performance?.benchmark||'Not returned'],
-  ['AMFI benchmark trailing return',x=>{const v=amfiByCode.get(String(x.code))?.performance?.trailingReturns?.[periodKey]?.benchmark;return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?fmtPct(Number(v)):'Unavailable'}],
-  ['AMFI trailing excess return',x=>{const v=amfiByCode.get(String(x.code))?.performance?.trailingReturns?.[periodKey];return v&&v.fund!==null&&v.fund!==undefined&&v.benchmark!==null&&v.benchmark!==undefined?fmtPct(Number(v.fund)-Number(v.benchmark)):'Unavailable'}],
-  ['Official AMFI Information Ratio†',x=>{const v=amfiByCode.get(String(x.code))?.performance?.informationRatio?.[periodKey];return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?fmtNum(Number(v),3):'Unavailable'}],
-  ['Alpha (annualised)',x=>'Unavailable'],
-  ['Beta',x=>'Unavailable'],
-  ['Tracking error',x=>'Unavailable'],
-  ['Full TER',x=>{const v=amfiByCode.get(String(x.code))?.ter?.terPct;return Number.isFinite(Number(v))?fmtPct(Number(v)):'Unavailable'}],
-  ['AUM (₹ crore)',x=>{const v=amfiByCode.get(String(x.code))?.performance?.aumCr;return Number.isFinite(Number(v))?Number(v).toLocaleString('en-IN',{maximumFractionDigits:2}):'Unavailable'}],
-  ['Riskometer',x=>amfiByCode.get(String(x.code))?.performance?.riskometer||'Not returned'],
-  ['Category',x=>categoryName(x.meta,x.meta.scheme_name||('Scheme '+x.code))]
- ];
- $('compareHead').innerHTML='<tr><th>Measure</th>'+labels.map(n=>'<th>'+escapeHtml(n)+'</th>').join('')+'</tr>';
- $('compareBody').innerHTML=metrics.map(row=>{
-  const advanced=['Sharpe ratio*','Sortino ratio*','Alpha (annualised)','Beta','Tracking error','Official AMFI Information Ratio†'].includes(row[0]);
-  return '<tr class="'+(advanced?'advanced-row':'')+'"><td class="fund-cell">'+row[0]+'</td>'+items.map(x=>'<td>'+row[1](x)+'</td>').join('')+'</tr>';
+async function addCompare(code){
+  code=Number(code);
+  if(state.compare.includes(code))return toast('This scheme is already in your comparison.');
+  if(state.compare.length>=3)return toast('You can compare up to three schemes.');
+  toast('Checking scheme category, plan, option and benchmark…');
+  const candidate=await ensureCompare(code);
+  if(!candidate.data.length)return toast('Scheme NAV data could not be validated. It was not added.');
+  const candidateDisclosure=await ensureAmfiForCompare(candidate);
+  if(state.compare.length){
+   const existingItems=await Promise.all(state.compare.map(async existingCode=>{
+    const item=await ensureCompare(existingCode);
+    const disclosure=await ensureAmfiForCompare(item);
+    return {item,disclosure};
+   }));
+   const candidateId=compareIdentity(candidate,candidateDisclosure);
+   for(const existing of existingItems){
+    const existingId=compareIdentity(existing.item,existing.disclosure);
+    const differences=[];
+    if(candidateId.subcategory!==existingId.subcategory)differences.push('category sub-type');
+    if(candidateId.plan!==existingId.plan)differences.push('plan');
+    if(candidateId.option!==existingId.option)differences.push('option');
+    if(!candidateId.benchmark||!existingId.benchmark)differences.push('benchmark not confirmed');
+    else if(candidateId.benchmark!==existingId.benchmark)differences.push('benchmark');
+    if(differences.length)return toast('Not added: '+differences.join(', ')+' does not match '+(existing.item.meta?.scheme_name||'the selected scheme')+'.');
+   }
+  }
+  state.compare.push(code);
+  renderCompare();
+  toast('Scheme added. The comparison set passed the like-for-like checks.');
  }).join('');
  $('compareChart').innerHTML=comparisonReturnSvg(items,labels);
  $('compareRisk').innerHTML=items.map(x=>{
