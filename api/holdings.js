@@ -330,7 +330,7 @@ async function getSchemeMeta(code) {
   if (!name || !fundHouse) throw new Error("Scheme metadata did not identify a scheme and AMC");
   return { name, fundHouse, category: String(meta.scheme_category || "") };
 }
-async function resolvePortfolio(scheme) {
+async function resolvePortfolio(scheme, debug = false) {
   const source = Object.values(AMC_SOURCES).find(x => x.match.test(scheme.fundHouse));
   if (!source) throw Object.assign(new Error("Automatic public holdings retrieval is not yet supported for " + scheme.fundHouse + ". No substitute or estimated holdings were used."), { status: 422, fundHouse: scheme.fundHouse });
   if (/arbitrage|equity savings/i.test(scheme.name)) throw Object.assign(new Error("This scheme uses arbitrage or hedged equity strategies. Gross stock holdings do not equal net market exposure, so FundLens withholds the overlap calculation."), { status: 422, fundHouse: scheme.fundHouse });
@@ -351,6 +351,22 @@ async function resolvePortfolio(scheme) {
   const buf = await fetchBinary(fileUrl, source.page);
   if (buf.readUInt32LE(0) !== 0x04034b50) throw new Error("The AMC file is not an XLSX workbook; it was not parsed or approximated");
   const asOf = chosen.asOf || parseDisclosureDate(fileUrl);
+  if (debug && source === AMC_SOURCES.hdfc) {
+    const rows = parseXlsxRows(buf);
+    const candidates = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const vals = row.map(c => String(c?.value ?? ""));
+      const isin = cellValue(row, 1).toUpperCase().replace(/\\s+/g, "");
+      const name = cellValue(row, 3);
+      const industry = cellValue(row, 4);
+      const rawWeight = cellValue(row, 7);
+      if (/^[A-Z]{2}[A-Z0-9]{10}$/.test(isin) && name && rawWeight) {
+        candidates.push({ row: i + 1, isin, name, industry, rawWeight });
+      }
+    }
+    return { debug: true, schemeName: scheme.name, asOf, fileUrl, totalRows: rows.length, isinRows: candidates.length, candidates };
+  }
   const parsed = parsePortfolio(buf);
   const ageDays = asOf ? Math.floor((Date.now() - new Date(asOf + "T00:00:00Z").getTime()) / 86400000) : null;
   return {
@@ -381,7 +397,7 @@ module.exports = async function handler(req, res) {
   if (!Number.isSafeInteger(code) || code <= 0) return res.status(400).json({ error: "A valid MFAPI schemeCode is required." });
   try {
     const scheme = await getSchemeMeta(code);
-    const result = await resolvePortfolio({ ...scheme, schemeCode: code });
+    const result = await resolvePortfolio({ ...scheme, schemeCode: code }, req.query.debug === "1");
     return res.status(200).json(result);
   } catch (error) {
     const status = Number(error.status) || 502;
