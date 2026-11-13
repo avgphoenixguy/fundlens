@@ -134,14 +134,15 @@ function findPpfasDownload(items, alias) {
 }
 function findHdfcDownload(items, schemeName) {
   const scored = items.map(x => {
-    let label = String(x.label || "");
-    try { label = decodeURIComponent(label); } catch (_) {}
-    label = label.replace(/\b(?:monthly|fortnightly)\b/gi, " ")
+    let filename = "";
+    try { filename = decodeURIComponent(new URL(x.url).pathname.split("/").pop() || ""); }
+    catch (_) { filename = String(x.label || ""); }
+    filename = filename
+      .replace(/\b(?:monthly|fortnightly)\b/gi, " ")
       .replace(/\b\d{1,2}\s+[A-Za-z]+\s+20\d{2}\b/g, " ")
-      .replace(/\.(?:xlsx|xlsm|xls|csv)\b/gi, " ")
-      .replace(/https?:\/\//gi, " ");
-    return { ...x, score: tokenScore(schemeName, label) };
-  }).filter(x => x.score >= 0.8)
+      .replace(/\.(?:xlsx|xlsm|xls|csv)\b/gi, " ");
+    return { ...x, filename, score: tokenScore(schemeName, filename) };
+  }).filter(x => x.score >= 0.85)
     .sort((a, b) => (b.asOf || "").localeCompare(a.asOf || "") || b.score - a.score);
   return scored[0] || null;
 }
