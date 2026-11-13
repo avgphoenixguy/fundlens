@@ -48,35 +48,32 @@ function planSuffix(name,plan){
  if(plan==="regular"&&/direct/.test(s))return false;
  return true;
 }
-async function categoryRecords(categoryId,categoryLabel){
+async function categoryRecords(categoryId,categoryLabel,schemeName,plan){
  const subs=await post("/getsubcategory",{category:categoryId});
  if(!subs.length)return [];
  const candidates=subs.map(x=>({id:x.id??x.subCategoryId??x.subcategoryId,name:x.name??x.subCategory??x.subCategoryName??""}))
-  .filter(x=>x.id!=null);
- if(!candidates.length)return [];
- // Prefer the subcategory whose official AMFI label best matches MFAPI's scheme category.
- const ranked=candidates.map(x=>({...x,score:tokenScore(categoryLabel,x.name)})).sort((a,b)=>b.score-a.score);
- // Query likely matches first; retain other subcategories as fallback, but serially to respect AMFI rate limits.
- const ordered=[...ranked.filter(x=>x.score>=0.45),...ranked.filter(x=>x.score<0.45)];
- let reportDate=null,chosenRows=[];
+  .filter(x=>x.id!=null)
+  .map(x=>({...x,score:tokenScore(categoryLabel,x.name)}))
+  .sort((a,b)=>b.score-a.score);
+ // Scheme category metadata should identify one AMFI subcategory; try only the three closest
+ // labels if the category wording differs between MFAPI and AMFI.
+ const targets=candidates.slice(0,3);
  for(let back=0;back<=7;back++){
   const d=new Date();d.setDate(d.getDate()-back);
-  const dateStr=amfiDate(d);
-  for(const sub of ordered.slice(0,1)){
-   const rows=await post("/fundperformance",{maturityType:MATURITY_TYPE,category:categoryId,subCategory:sub.id,mfid:0,reportDate:dateStr});
-   if(rows.length){reportDate=dateStr;chosenRows=rows;break}
+  const reportDate=amfiDate(d);
+  for(const sub of targets){
+   const rows=await post("/fundperformance",{maturityType:MATURITY_TYPE,category:categoryId,subCategory:sub.id,mfid:0,reportDate});
+   if(rows.length){
+    const exact=rows.find(x=>norm(x.schemeName)===norm(schemeName)&&planSuffix(x.schemeName,plan));
+    if(exact)return [{...exact,_amfiCategory:categoryId,_amfiReportDate:reportDate}];
+    const ranked=rows.filter(x=>x.schemeName&&planSuffix(x.schemeName,plan))
+      .map(x=>({record:x,score:tokenScore(schemeName,x.schemeName)}))
+      .sort((x,y)=>y.score-x.score);
+    if((ranked[0]?.score||0)>=0.8)return [{...ranked[0].record,_amfiCategory:categoryId,_amfiReportDate:reportDate}];
+   }
   }
-  if(reportDate)break;
  }
- if(!reportDate)return [];
- // Fetch the remaining subcategories for the same date, in small parallel batches.
- const remaining=ordered.slice(1);
- for(let i=0;i<remaining.length;i+=4){
-  const batch=remaining.slice(i,i+4);
-  const results=await Promise.all(batch.map(sub=>post("/fundperformance",{maturityType:MATURITY_TYPE,category:categoryId,subCategory:sub.id,mfid:0,reportDate})));
-  results.forEach(rows=>chosenRows.push(...rows));
- }
- return chosenRows.map(x=>({...x,_amfiCategory:categoryId,_amfiReportDate:reportDate}));
+ return [];
 }
 module.exports=async function handler(req,res){
  res.setHeader("Cache-Control","public, s-maxage=21600, stale-while-revalidate=86400");
@@ -91,7 +88,7 @@ module.exports=async function handler(req,res){
  const categoryId=Number(req.query.category)||classifyCategory(schemeCategory+" "+schemeName);
  try{
   const categories=categoryId?[categoryId]:CATEGORIES;
-  const arrays=await Promise.all(categories.map(id=>categoryRecords(id,schemeCategory)));
+  const arrays=await Promise.all(categories.map(id=>categoryRecords(id,schemeCategory,schemeName,plan)));
   const records=arrays.flat();
   if(!records.length)return res.status(404).json({error:"AMFI Fund Performance API returned no records for the selected category."});
   const eligible=records.filter(r=>r.schemeName&&planSuffix(r.schemeName,plan));
