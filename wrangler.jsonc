@@ -5,7 +5,7 @@
   "compatibility_date": "2026-11-13",
   "workers_dev": true,
   "build": {
-    "command": "mkdir -p dist && cp index.html dist/index.html"
+    "command": "mkdir -p dist/portfolio-fit && cp index.html dist/index.html && cp case-study/portfolio-fit/index.html dist/portfolio-fit/index.html"
   },
   "assets": {
     "directory": "./dist",
