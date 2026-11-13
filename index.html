@@ -775,7 +775,7 @@ async function fetchPortfolioHoldings(code){
 }
 function drawOverlapSearchResults(list){
  const root=$('overlapSearchResults');
- const filtered=applySearchPlan(list).filter(x=>/direct/i.test(x.name)&&/growth/i.test(x.name));
+ const filtered=list.filter(x=>/direct/i.test(x.name)&&/growth/i.test(x.name));
  root.innerHTML=filtered.length?filtered.slice(0,30).map(x=>'<div class="result-row"><div><div class="result-name">'+escapeHtml(x.name)+'</div><div class="result-code">Scheme code '+x.code+'</div></div><button class="icon-btn" data-overlap-add="'+x.code+'" type="button">＋ Add scheme</button></div>').join(''):'<div class="empty">No Direct Growth matches found. Search for the exact AMC or scheme name.</div>';
  root.querySelectorAll('[data-overlap-add]').forEach(b=>{
   const item=filtered.find(x=>x.code===Number(b.dataset.overlapAdd));
@@ -837,6 +837,7 @@ function renderPortfolioAnalysis(){
  const overlapTop=pairs.length?Math.max(...pairs.map(p=>p.overlap)):0;
  const commonAcross=stocks.filter(x=>x.funds.length>=2).length;
  root.innerHTML='<div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Published listed-equity positions, weighted by your hypothetical fund allocations. Snapshot dates: '+earliest+' to '+latest+'.</p></div><span class="overlap-badge good">VALIDATED DATA</span></div>'+
+  (errors.length?'<div class="warning-box">'+errors.length+' selected scheme(s) could not be included because validated public holdings were unavailable. Results below include only the '+loaded.length+' successfully validated scheme(s).</div>':'')+
   (stale.length?'<div class="warning-box">At least one disclosure is older than 45 days. Results are historical snapshots, not current holdings. Review each source date before interpreting overlap.</div>':'')+
   '<div class="overlap-kpis"><div class="overlap-kpi"><span>Highest pairwise overlap</span><strong>'+fmtNum(overlapTop,2)+'%</strong><small>Conservative min-weight method</small></div><div class="overlap-kpi"><span>Common securities</span><strong>'+commonAcross+'</strong><small>Held by at least two selected schemes</small></div><div class="overlap-kpi"><span>Selected schemes</span><strong>'+loaded.length+'</strong><small>With validated holdings files</small></div><div class="overlap-kpi"><span>Unique securities</span><strong>'+stocks.length+'</strong><small>ISIN-matched across selected funds</small></div></div>'+
   '<div class="overlap-two"><div><div class="card" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Pairwise portfolio overlap</div><div class="card-sub">Sum of the lower of the two schemes’ NAV weights for each matching ISIN.</div></div></div><div class="table-scroll"><table class="overlap-table"><thead><tr><th>Scheme pair</th><th>Overlap</th><th>Shared stocks</th></tr></thead><tbody>'+pairRows+'</tbody></table></div></div>'+
