@@ -42,7 +42,7 @@ Benchmark TRI files are imported manually and held only in browser memory. Dated
 1. **Benchmark source / licensing:** official index data is published through index-provider channels, but a public prototype should not scrape, redistribute or republish it as a permanent data service without checking provider terms and obtaining appropriate access.
 2. **Scheme-to-benchmark mapping:** the authoritative benchmark is scheme-specific and can change. It must be checked against the current SID / factsheet, not guessed from the fund name.
 3. **Holdings formats vary:** AMC disclosures differ in identifiers, debt instrument descriptions, cash, derivatives and reporting dates. Reliable cross-AMC ingestion requires normalisation and validation.
-4. **Static app architecture:** the current product is a single-page static website. Browser uploads are session-only; there is no database, scheduled refresh, user authentication, file persistence or audited calculation service.
+3. **Static app architecture:** the current product is a single-page static website. The benchmark TRI upload is session-only; there is no database, scheduled refresh, user authentication, file persistence or audited calculation service.
 
 These gaps do not make the product concept impossible. They are reasons not to pretend those capabilities are already live. A production build would connect approved provider data, add normalisation and validation, version source snapshots, and display freshness / coverage per metric.
 
