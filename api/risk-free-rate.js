@@ -18,7 +18,7 @@ function parseRbi(html) {
   const candidates = trs.filter(row => /6\.94\s*%?\s*GS\s*2036/i.test(row));
   let rate = null;
   if (candidates.length) {
-    const row = candidates[candidates.length - 1]
+    const row = candidates[0]
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;/gi, " ")
