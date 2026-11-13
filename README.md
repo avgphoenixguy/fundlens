@@ -24,7 +24,7 @@ A methodology-first workspace that exposes:
 - Sharpe and Sortino estimates using an automatically retrieved RBI long-dated G-Sec proxy.
 - Official AMFI Information Ratio values for the selected Direct / Regular plan and supported 1Y / 3Y / 5Y / 10Y periods.
 - AMFI-published benchmark mapping and trailing scheme / benchmark performance.
-- Alpha, Beta, tracking error and benchmark-relative rolling returns only when a real daily benchmark TRI series is successfully matched to NAV dates.
+- Alpha, Beta, FundLens Information Ratio estimates, tracking error and benchmark-relative rolling returns only when a weekly TRI-derived benchmark series is successfully matched to NAV dates.
 - Category-aware interpretation for active equity, index / passive, debt and hybrid schemes.
 
 ## Research workspaces
@@ -65,7 +65,11 @@ Pairwise overlap is the sum, across common ISINs, of the lower of the two scheme
 FundLens fetches the RBI Current Rates Government Securities Market page and uses the yield on the long-dated Government of India security closest to ten years to maturity. It displays the security, annual yield, source and observation date. The current yield is divided by 252 and held constant over the selected historical NAV window. This is a transparent proxy, not a historical daily risk-free curve or a maturity-matched short-term rate.
 
 ### Benchmark TRI
-The scheme's declared benchmark is retrieved from AMFI. FundLens attempts to obtain daily Nifty TRI from the NSE Indices historical-data endpoint for supported Nifty benchmarks. The current server-side connection is returning HTML challenge responses from NSE in this environment, so benchmark TRI data is not reliably available in the public prototype at present. The UI suppresses Alpha, Beta, tracking error and benchmark-relative rolling results when matched daily TRI is absent. It does not substitute a price index or fabricate observations.
+The scheme's declared benchmark is retrieved from AMFI. For supported Nifty benchmarks, the serverless route reads Tipsheet's published weekly index-page dataset (indices/p/<index>). Tipsheet documents these as weekly chart series derived from NSE Indices Total Return Index data, with dividends reinvested. The dataset is published as a rebased growth-of-100 curve, not as raw NSE index levels.
+
+The connector selects the compact tr (Total Return) series and excludes pr (Price Return), drawdown, volatility and other non-benchmark series. It validates the weekly observation cadence before returning data. The published method describes how identified anomalous TRI prints are repaired against the corresponding price index; this is a documented source correction, not a substitution of the full price-return series. FundLens does not use Tipsheet's separate model indices.
+
+The latest weekly connector and parser are committed in GitHub, but the latest Netlify production deployment has not yet been verified. Until the public endpoint returns a validated weekly series and exact-date NAV matches are available, benchmark-dependent FundLens calculations remain unavailable. AMFI-published trailing benchmark returns and official plan-specific IR are separate source disclosures and can still be shown when AMFI supplies them.
 
 ## Metric calculations
 
@@ -73,18 +77,19 @@ The scheme's declared benchmark is retrieved from AMFI. FundLens attempts to obt
 - **Volatility:** sample standard deviation of daily NAV returns multiplied by √252.
 - **Sharpe:** mean daily scheme return less the daily RBI G-Sec proxy, divided by daily return standard deviation, multiplied by √252.
 - **Sortino:** mean daily scheme return less the same RBI G-Sec target, divided by downside deviation, multiplied by √252.
-- **Alpha:** annualised daily CAPM intercept using matched fund / benchmark returns and the RBI G-Sec proxy.
-- **Beta:** sample covariance of matched fund and benchmark daily returns divided by benchmark return variance.
-- **FundLens Information Ratio estimate:** daily arithmetic active return divided by sample standard deviation of daily active returns, annualised by √252. It is shown only when a matched benchmark TRI is available.
+- **Alpha:** annualised weekly CAPM intercept using matched NAV / TRI-derived benchmark returns and the weekly-equivalent RBI G-Sec proxy; annualised with 52 periods per year.
+- **Beta:** sample covariance of matched weekly fund and benchmark returns divided by weekly benchmark return variance.
+- **FundLens Information Ratio estimate:** mean weekly arithmetic active return divided by sample standard deviation of weekly active returns, annualised by √52. It is shown only when a matched weekly TRI-derived benchmark series is available.
 - **AMFI Information Ratio:** official AMFI-published plan-specific period value, preferred over the FundLens estimate when available. It is not recalculated by FundLens.
-- **Tracking error:** sample standard deviation of daily active returns multiplied by √252.
-- **Benchmark-relative rolling:** fund and benchmark CAGR over exactly the same matched NAV / TRI start and end dates.
+- **Tracking error:** sample standard deviation of weekly active returns multiplied by √52.
+- **Benchmark CAGR / excess CAGR:** computed over the same first and last exact-date-matched weekly fund NAV / TRI-derived observations.
+- **Benchmark-relative rolling:** fund and benchmark CAGR over exactly the same matched NAV / TRI start and end dates. Relative start dates are weekly, or monthly-spaced across weekly observations.
 
-Full formulas, source lineage and limitations are in the Advanced Metrics Methodology, Rolling Return Methodology, Category-aware Research, Automatic Data Assumptions and Prototype Scope & Limitations documents.
+Full formulas, source lineage and limitations are in [Advanced Metrics Methodology](docs/ADVANCED_METRICS_METHODOLOGY.md), [Rolling Return Methodology](docs/ROLLING_RETURN_METHODOLOGY.md), [Category-aware Research](docs/CATEGORY_AWARE_RESEARCH.md), [Automatic Data Assumptions](docs/AUTO_DATA_ASSUMPTIONS.md), [Prototype Scope & Limitations](docs/PROTOTYPE_SCOPE_AND_LIMITATIONS.md) and [Automatic Data Smoke Tests](docs/AUTOMATIC_DATA_SMOKE_TESTS.md).
 
 ## No user uploads
 
-The current UI has no data upload controls. NAV, AMFI scheme disclosures, AMFI TER, supported AMC portfolio files and RBI yield are retrieved automatically. Holdings retrieval currently supports PPFAS and HDFC; other AMCs are not assumed to share the same workbook format. Benchmark TRI is requested automatically but is currently subject to NSE's upstream challenge response. Missing benchmark data is reported rather than replaced with an unsuitable index.
+The current UI has no data upload controls. NAV, AMFI scheme disclosures, AMFI TER, supported AMC portfolio files and RBI yield are retrieved automatically. Holdings retrieval currently supports PPFAS and HDFC; other AMCs are not assumed to share the same workbook format. Weekly benchmark TRI-derived data is requested automatically from Tipsheet for supported Nifty indices. The connector is committed in GitHub but remains unverified in the paused Netlify production deployment; missing benchmark data is reported rather than replaced with an unsuitable index.
 
 ## Run locally
 
@@ -92,14 +97,14 @@ No front-end package installation or build step is required.
 
     python3 -m http.server 3000
 
-For local API routes, deploy to Vercel or run the Vercel development runtime so the /api/* serverless functions are available.
+For local API routes, install the Netlify CLI and run netlify dev from the repository root so the /api/* redirects and serverless functions are available. A plain static server only serves the front end.
 
 ## Limitations
 
 - AMFI name matching is automated and may fail for renamed, legacy or unusual scheme names. A match must pass a similarity threshold.
 - Scheme category classification for AMFI queries uses MFAPI scheme metadata and scheme-name heuristics. Confirm the category and benchmark against the current SID / factsheet.
 - The RBI 10-year G-Sec yield is a current sovereign proxy held constant across the historical return sample. For debt funds, a duration-matched short-term sovereign reference could be more appropriate.
-- NSE's public historical TRI endpoint is not a documented commercial API and is currently returning HTML challenge responses from the Vercel serverless environment. Benchmark-dependent metrics remain unavailable until the feed works reliably or an approved index-data integration is used.
+- The weekly Tipsheet connector is a prototype integration over published NSE TRI-derived data. The latest parser changes are committed but not yet production-verified. Confirm source permissions and any index-data licensing requirements before commercial use; public fetchability does not itself establish production redistribution rights.
 - AMFI TER workbook formats and API endpoints may change. The app displays the TER date and does not infer missing TER values.
 - Curated AMC references are dated fallbacks only. They are not represented as live if the AMFI source is unavailable.
 - Automatic holdings ingestion currently has PPFAS and HDFC adapters. Other AMCs return unavailable until their public workbook URL, instrument layout and weight convention are independently verified. Portfolio disclosures are periodic, not live, and may be stale.
