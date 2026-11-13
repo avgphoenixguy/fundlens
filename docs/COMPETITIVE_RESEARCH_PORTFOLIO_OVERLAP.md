@@ -44,3 +44,11 @@ A future product question may be whether overlap analysis should be surfaced con
 ## Implication for case interview
 
 Do not say "Angel One does not offer mutual fund overlap analysis." Say: "The standard Mutual Funds journey documents scheme-level holdings and peer comparison. I also found an Angel One-hosted NXT research surface with an overlap checker. I therefore removed overlap as a novel feature from FundLens; the open question is whether this tool is sufficiently surfaced and data-enabled within the core investor journey."
+
+## Is automatic public holdings ingestion possible?
+
+Yes, technically. SEBI's Master Circular for Mutual Funds dated 20 March 2026 (clause 6.1.1) requires AMCs to publish month-end scheme portfolios with ISIN on the AMC and AMFI websites within 10 calendar days in downloadable spreadsheet format. Debt scheme holdings, including instrument yield, are disclosed fortnightly within five calendar days. A backend can therefore discover and retrieve public files on a schedule, normalise different AMC formats, validate identifiers and dates, and make holdings searchable by scheme and stock.
+
+The constraint is not that the data is private. The constraint is operational: public files are periodic, formats need normalisation, coverage and stale data must be monitored, and AMFI / AMC access and redistribution terms still need to be respected. The NXT page itself describes a protected refresh workflow and an upstream holdings refresh process. This strongly suggests that Angel One has already built the data-ingestion approach needed for its own overlap tool.
+
+Source for the disclosure obligation: [SEBI Master Circular for Mutual Funds, 20 March 2026, clause 6.1.1](https://www.sebi.gov.in/sebi_data/attachdocs/mar-2026/1774024028162.pdf).
