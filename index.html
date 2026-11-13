@@ -268,7 +268,7 @@ const seeds=[
  {code:143269,name:'Parag Parikh Liquid Fund - Direct Plan - Growth'},
  {code:154155,name:'Parag Parikh Large Cap Fund - Direct Plan - Growth'}
 ];
-const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:'',amfiPerformance:null,amfiTer:null};
+const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:'',amfiPerformance:null,amfiTer:null,amfiCompareCache:new Map()};
 const $=id=>document.getElementById(id);
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3200)}
 function fmtPct(v,d=2){return Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(d)+'%':'—'}
@@ -659,39 +659,69 @@ function addCompare(code){
 }
 function removeCompare(code){state.compare=state.compare.filter(x=>x!==code);renderCompare()}
 async function ensureCompare(code){if(code===state.code)return {code,meta:state.meta,data:state.data};const cached=state.cache.get(Number(code));if(cached)return {code,meta:cached.meta,data:cached.data};try{const r=await fetch(API+'/'+code);if(!r.ok)throw new Error('NAV request failed');const b=await r.json();const d=(b.data||[]).map(x=>({date:parseDate(x.date),nav:Number(x.nav)})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.nav)&&x.nav>0).sort((a,b)=>a.date-b.date);const value={meta:b.meta||{},data:d};state.cache.set(Number(code),value);return {code,meta:value.meta,data:value.data}}catch(e){return {code,meta:{scheme_name:'Scheme '+code},data:[]}}}
+async function ensureAmfiForCompare(item){
+ const cacheKey=String(item.code);
+ if(state.amfiCompareCache.has(cacheKey))return state.amfiCompareCache.get(cacheKey);
+ const name=item.meta?.scheme_name||item.meta?.schemeName||('Scheme '+item.code);
+ const category=item.meta?.scheme_category||'';
+ const categoryId=amfiCategoryForScheme(item.meta,name);
+ const plan=planForScheme(name);
+ const q='/api/amfi-performance?name='+encodeURIComponent(name)+'&schemeCategory='+encodeURIComponent(category)+'&category='+encodeURIComponent(categoryId||'')+'&plan='+encodeURIComponent(plan);
+ const terQ='/api/amfi-ter?name='+encodeURIComponent(name)+'&plan='+encodeURIComponent(plan);
+ const [performance,ter]=await Promise.all([
+  fetch(q,{headers:{'Accept':'application/json'}}).then(async r=>{const x=await r.json();return r.ok?x:null}).catch(()=>null),
+  fetch(terQ,{headers:{'Accept':'application/json'}}).then(async r=>{const x=await r.json();return r.ok?x:null}).catch(()=>null)
+ ]);
+ const result={performance,ter,plan};
+ state.amfiCompareCache.set(cacheKey,result);
+ return result;
+}
 async function renderCompare(){
  $('compareCount').textContent=state.compare.length+' / 3 SELECTED';
  $('compareTray').innerHTML=state.compare.length?state.compare.map(c=>'<span class="compare-item">'+c+' <button class="remove" data-remove="'+c+'">×</button></span>').join(''):'<span class="muted">Add a fund from the universe or current selection.</span>';
  $('compareTray').querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>removeCompare(Number(b.dataset.remove))));
  if(!state.compare.length){$('compareHead').innerHTML='<tr><th>Metric</th></tr>';$('compareBody').innerHTML='<tr><td class="muted">No funds selected.</td></tr>';$('compareChart').innerHTML='<div class="empty">Add funds to compare.</div>';$('compareRisk').textContent='Add funds to compare.';return}
- const items=await Promise.all(state.compare.map(ensureCompare));const labels=items.map(x=>x.meta.scheme_name||x.meta.schemeName||('Scheme '+x.code));
+ $('compareBody').innerHTML='<tr><td colspan="'+(state.compare.length+1)+'" class="muted">Loading NAV and AMFI disclosures for selected schemes…</td></tr>';
+ const items=await Promise.all(state.compare.map(ensureCompare));
+ const labels=items.map(x=>x.meta.scheme_name||x.meta.schemeName||('Scheme '+x.code));
+ const disclosures=await Promise.all(items.map(ensureAmfiForCompare));
+ const amfiByCode=new Map(items.map((x,i)=>[String(x.code),disclosures[i]||{}]));
+ const periodKey=({'12':'1Y','36':'3Y','60':'5Y','120':'10Y'})[$('analysisPeriod')?.value]||'';
  const metrics=[
- ['Latest NAV',x=>x.data.length?money(x.data[x.data.length-1].nav):'N/A'],
- ['1Y CAGR',x=>{const t=trailing(x.data,12);return t?fmtPct(t.cagr):'N/A'}],
- ['3Y CAGR',x=>{const t=trailing(x.data,36);return t?fmtPct(t.cagr):'N/A'}],
- ['5Y CAGR',x=>{const t=trailing(x.data,60);return t?fmtPct(t.cagr):'N/A'}],
- ['Annualised volatility',x=>fmtPct(navRiskFor(x.data).vol)],
- ['Sharpe ratio*',x=>Number.isFinite(navRiskFor(x.data).sharpe)?fmtNum(navRiskFor(x.data).sharpe,2):'N/A'],
- ['Sortino ratio*',x=>Number.isFinite(navRiskFor(x.data).sortino)?fmtNum(navRiskFor(x.data).sortino,2):'N/A'],
- ['Alpha (annualised)',x=>{const b=referenceDisclosure[x.code]?.benchmark||benchmarkDefaults[x.code]||'';const eq=classifyScheme(x.meta,x.meta.scheme_name||('Scheme '+x.code))==='equity';const m=eq&&b&&b===state.benchmarkName?calcAdvancedStats(x.data,state.benchmarkSeries):null;return Number.isFinite(m?.alpha)?fmtPct(m.alpha):'Unavailable'}],
- ['Beta',x=>{const b=referenceDisclosure[x.code]?.benchmark||benchmarkDefaults[x.code]||'';const eq=classifyScheme(x.meta,x.meta.scheme_name||('Scheme '+x.code))==='equity';const m=eq&&b&&b===state.benchmarkName?calcAdvancedStats(x.data,state.benchmarkSeries):null;return Number.isFinite(m?.beta)?fmtNum(m.beta,2):'Unavailable'}],
- ['Information Ratio†',x=>{const b=referenceDisclosure[x.code]?.benchmark||benchmarkDefaults[x.code]||'';const eq=classifyScheme(x.meta,x.meta.scheme_name||('Scheme '+x.code))==='equity';const m=eq&&b&&b===state.benchmarkName?calcAdvancedStats(x.data,state.benchmarkSeries):null;return Number.isFinite(m?.ir)?fmtNum(m.ir,2):'Unavailable'}],
- ['Tracking error',x=>{const b=referenceDisclosure[x.code]?.benchmark||benchmarkDefaults[x.code]||'';const m=b&&b===state.benchmarkName?calcAdvancedStats(x.data,state.benchmarkSeries):null;return Number.isFinite(m?.te)?fmtPct(m.te):'Unavailable'}],
- ['Maximum drawdown',x=>fmtPct(maxDrawdown(x.data))],
- ['NAV observations',x=>x.data.length.toLocaleString('en-IN')],
- ['AMC',x=>x.meta.fund_house||'Not supplied'],
- ['Category',x=>categoryName(x.meta,x.meta.scheme_name||('Scheme '+x.code))]
-];
+  ['Latest NAV',x=>x.data.length?money(x.data[x.data.length-1].nav):'N/A'],
+  ['1Y CAGR (NAV)',x=>{const t=trailing(x.data,12);return t?fmtPct(t.cagr):'N/A'}],
+  ['3Y CAGR (NAV)',x=>{const t=trailing(x.data,36);return t?fmtPct(t.cagr):'N/A'}],
+  ['5Y CAGR (NAV)',x=>{const t=trailing(x.data,60);return t?fmtPct(t.cagr):'N/A'}],
+  ['Annualised volatility',x=>fmtPct(navRiskFor(x.data).vol)],
+  ['Sharpe ratio*',x=>Number.isFinite(navRiskFor(x.data).sharpe)?fmtNum(navRiskFor(x.data).sharpe,2):'N/A'],
+  ['Sortino ratio*',x=>Number.isFinite(navRiskFor(x.data).sortino)?fmtNum(navRiskFor(x.data).sortino,2):'N/A'],
+  ['AMFI benchmark',x=>amfiByCode.get(String(x.code))?.performance?.benchmark||'Not returned'],
+  ['AMFI benchmark trailing return',x=>{const v=amfiByCode.get(String(x.code))?.performance?.trailingReturns?.[periodKey]?.benchmark;return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?fmtPct(Number(v)):'Unavailable'}],
+  ['AMFI trailing excess return',x=>{const v=amfiByCode.get(String(x.code))?.performance?.trailingReturns?.[periodKey];return v&&v.fund!==null&&v.fund!==undefined&&v.benchmark!==null&&v.benchmark!==undefined?fmtPct(Number(v.fund)-Number(v.benchmark)):'Unavailable'}],
+  ['Official AMFI Information Ratio†',x=>{const v=amfiByCode.get(String(x.code))?.performance?.informationRatio?.[periodKey];return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?fmtNum(Number(v),3):'Unavailable'}],
+  ['Alpha (annualised)',x=>'Unavailable'],
+  ['Beta',x=>'Unavailable'],
+  ['Tracking error',x=>'Unavailable'],
+  ['Full TER',x=>{const v=amfiByCode.get(String(x.code))?.ter?.terPct;return Number.isFinite(Number(v))?fmtPct(Number(v)):'Unavailable'}],
+  ['AUM (₹ crore)',x=>{const v=amfiByCode.get(String(x.code))?.performance?.aumCr;return Number.isFinite(Number(v))?Number(v).toLocaleString('en-IN',{maximumFractionDigits:2}):'Unavailable'}],
+  ['Riskometer',x=>amfiByCode.get(String(x.code))?.performance?.riskometer||'Not returned'],
+  ['Category',x=>categoryName(x.meta,x.meta.scheme_name||('Scheme '+x.code))]
+ ];
  $('compareHead').innerHTML='<tr><th>Measure</th>'+labels.map(n=>'<th>'+escapeHtml(n)+'</th>').join('')+'</tr>';
- $('compareBody').innerHTML=metrics.map(row=>{const advanced=['Sharpe ratio*','Sortino ratio*','Alpha (annualised)','Beta','Information Ratio†','Tracking error'].includes(row[0]);return '<tr class="'+(advanced?'advanced-row':'')+'"><td class="fund-cell">'+row[0]+'</td>'+items.map(x=>'<td>'+row[1](x)+'</td>').join('')+'</tr>'}).join('');
+ $('compareBody').innerHTML=metrics.map(row=>{
+  const advanced=['Sharpe ratio*','Sortino ratio*','Alpha (annualised)','Beta','Tracking error','Official AMFI Information Ratio†'].includes(row[0]);
+  return '<tr class="'+(advanced?'advanced-row':'')+'"><td class="fund-cell">'+row[0]+'</td>'+items.map(x=>'<td>'+row[1](x)+'</td>').join('')+'</tr>';
+ }).join('');
  $('compareChart').innerHTML=comparisonReturnSvg(items,labels);
- $('compareRisk').innerHTML+='<div class="metric-caption">* NAV-only ratios use the '+Number($('rfRate')?.value||0).toFixed(2)+'% p.a. risk-free assumption set in Advanced view. Comparisons are only meaningful for similar categories, plans, options and matched periods. Benchmark-relative Alpha / Beta / IR require a matching TRI per scheme.</div>'; 
- $('compareRisk').innerHTML=items.map(x=>{const r=navRiskFor(x.data),v=r.vol,dd=r.drawdown;return '<div style="margin:12px 0"><div class="result-name">'+escapeHtml(x.meta.scheme_name||('Scheme '+x.code))+'</div><div class="fund-meta">Volatility '+fmtPct(v)+' · Max drawdown '+fmtPct(dd)+'</div></div>'}).join('');
+ $('compareRisk').innerHTML=items.map(x=>{
+  const r=navRiskFor(x.data),v=r.vol,dd=r.drawdown;
+  return '<div style="margin:12px 0"><div class="result-name">'+escapeHtml(x.meta.scheme_name||('Scheme '+x.code))+'</div><div class="fund-meta">Volatility '+fmtPct(v)+' · Max drawdown '+fmtPct(dd)+'</div></div>';
+ }).join('');
  const kinds=items.map(x=>classifyScheme(x.meta,x.meta.scheme_name||('Scheme '+x.code)));
  const uniqueKinds=[...new Set(kinds)];
- $('compareRisk').innerHTML+='<div class="data-status '+(uniqueKinds.length===1?'ok':'warn')+'">'+(uniqueKinds.length===1?'Selected funds share a broad category lens. Check their specific sub-category, plan, option and benchmark before drawing conclusions.':'These schemes span different category types. The table is descriptive, not a like-for-like ranking. Select comparable schemes for a valid peer comparison.')+'</div><div class="metric-caption">* NAV-only ratios use the '+Number($('rfRate')?.value||0).toFixed(2)+'% p.a. risk-free assumption. † FundLens IR is an annualised research estimate (daily arithmetic active return / daily active-return standard deviation × √252) for matched Tier 1 TRI; it is not the AMC / AMFI-reported figure. Advanced comparison ratios use the selected '+($('analysisPeriod')?.selectedOptions?.[0]?.text||'3 years')+' period. Benchmark ratios are displayed only when a scheme is mapped to the same selected benchmark.';
-
+ $('compareRisk').innerHTML+='<div class="data-status '+(uniqueKinds.length===1?'ok':'warn')+'">'+(uniqueKinds.length===1?'Selected funds share a broad category lens. Check their specific sub-category, plan, option and benchmark before drawing conclusions.':'These schemes span different category types. The table is descriptive, not a like-for-like ranking. Select comparable schemes for a valid peer comparison.')+'</div><div class="metric-caption">* NAV-only ratios use the current RBI 10-year G-Sec proxy displayed in Advanced view, held constant through the analysis period. † AMFI-reported IR is shown for the selected report period and the plan identified in each scheme name. AMFI trailing returns are source snapshots, not daily matched TRI regression inputs. Alpha, Beta and tracking error are suppressed until an actual matched TRI feed is available for each scheme.</div>';
 }
+
 function renderRisk(){if(!state.data.length)return;const d=state.data,dr=drawdownSeries(d);$('riskDrawdown').innerHTML=chartSvg(dr.map(x=>({date:x.date,value:x.value})),{zeroFloor:true,suffix:'%',color:'#c45b67',xLabel:'NAV date',yLabel:'Drawdown (%)'});const ret=[];for(let i=1;i<d.length;i++)ret.push((d[i].nav/d[i-1].nav-1)*100);$('riskHistogram').innerHTML=histogramSvg(ret,16,{xLabel:'Daily NAV return (%)',yLabel:'Number of trading days'})}
 $('openRolling').addEventListener('click',()=>showPage('rolling'));
 drawPicks();$('searchResults').innerHTML='<div class="empty">Use search above or select one of the popular schemes.</div>';
