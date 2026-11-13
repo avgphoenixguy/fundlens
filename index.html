@@ -82,15 +82,15 @@
     </div><div id="guidedNarrative" style="font-size:11px;color:#d4e2df;line-height:1.65;margin-top:13px">Load a scheme to see its research summary.</div>
    </div>
    <div class="panel-box advanced-only" id="benchmarkPanel">
-    <div class="panel-heading"><div><h3>Benchmark and assumptions</h3><p>Use the scheme's actual Tier 1 benchmark and matched total-return index observations. Select the analysis period so risk ratios share a common measurement window. Price-index data is not an acceptable substitute.</p></div><span class="tag amber">MATCHED TRI REQUIRED</span></div>
+    <div class="panel-heading"><div><h3>Benchmark and assumptions</h3><p>FundLens retrieves supported Nifty Total Return Index (TRI) observations automatically and matches them to NAV dates. The current RBI 10-year Government Security yield is the default risk-free proxy. Price-index data is never substituted for TRI.</p></div><span class="tag amber">MATCHED TRI REQUIRED</span></div>
     <div class="input-row">
-     <div class="input-field"><label>Benchmark series</label><select id="benchmarkName"><option value="">Select benchmark</option><option>NIFTY 50 TRI</option><option>NIFTY 100 TRI</option><option>NIFTY 500 TRI</option><option>NIFTY NEXT 50 TRI</option><option>NIFTY MIDCAP 150 TRI</option><option>CRISIL Hybrid 85+15 Conservative Index TRI</option><option>CRISIL Liquid Debt A-I Index</option><option>Other benchmark TRI</option></select></div>
-     <div class="input-field"><label>Upload official benchmark CSV</label><input class="file-input" type="file" id="benchmarkFile" accept=".csv,.txt"></div>
+     <div class="input-field"><label>Scheme benchmark (auto-mapped)</label><div class="data-status" id="benchmarkMapping">Waiting for scheme data…</div><select id="benchmarkName" hidden><option value="">Select benchmark</option><option>NIFTY 50 TRI</option><option>NIFTY 100 TRI</option><option>NIFTY 500 TRI</option><option>NIFTY NEXT 50 TRI</option><option>NIFTY MIDCAP 150 TRI</option><option>CRISIL Hybrid 85+15 Conservative Index TRI</option><option>CRISIL Liquid Debt A-I Index</option><option>Other benchmark TRI</option></select></div>
      <div class="input-field"><label>Analysis period</label><select id="analysisPeriod"><option value="12">1 year</option><option value="36" selected>3 years</option><option value="60">5 years</option><option value="120">10 years</option><option value="MAX">Maximum available</option></select></div>
-     <div class="input-field"><label>Risk-free rate assumption (% p.a.)</label><input id="rfRate" type="number" min="-5" max="30" step="0.05" value="0"></div>
+     <div class="input-field"><label>Risk-free proxy</label><div class="data-status" id="rfRateDisplay">Fetching RBI 10-year G-Sec yield…</div><input id="rfRate" type="hidden" value="7.2178"></div>
+     <div class="input-field"><label>Data refresh</label><div class="data-status" id="automaticDataUpdated">Loading automatic research inputs…</div></div>
     </div>
-    <div id="benchmarkStatus" class="data-status warn">No benchmark series loaded. Scheme-only metrics are available; Alpha, Beta, Information Ratio and tracking measures remain unavailable until a matched TRI file is loaded.</div>
-    <div class="metric-caption">For Nifty indices, use <a class="source-link" href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener">NSE Indices historical data, Total Returns Index Values ↗</a>. For non-Nifty benchmarks, use the exact TRI series named in the latest AMC SID or factsheet. CSV must contain a date column and a Total Return Index value column. The file is processed in this browser session only.</div>
+    <div id="benchmarkStatus" class="data-status warn">FundLens is retrieving the scheme's mapped benchmark TRI automatically. Unsupported benchmark families remain unavailable; no substitute index is used.</div>
+    <div class="metric-caption">Sources: <a class="source-link" href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener">NSE Indices historical Total Returns Index values ↗</a> · <a class="source-link" href="https://www.rbi.org.in/" target="_blank" rel="noopener">RBI Current Rates, Government Securities Market ↗</a>. The RBI 10-year G-Sec yield is used as a constant current-rate proxy over the selected NAV sample, not as a daily historical risk-free curve. Scheme benchmark mappings are stored for the curated schemes; unfamiliar schemes are not guessed.</div>
    </div>
    <div class="panel-box advanced-only" id="advancedMetrics">
     <div class="panel-heading"><div><h3>Risk-adjusted and benchmark-relative scorecard</h3><p>Calculated from NAV and, where imported, matched daily TRI observations.</p></div><span class="tag green">TRANSPARENT METHODOLOGY</span></div>
@@ -294,9 +294,78 @@ const referenceDisclosure={
 };
 function classifyScheme(meta,name){const s=((meta?.scheme_category||'')+' '+(meta?.scheme_name||name||'')).toLowerCase();if(/liquid|overnight|money market|ultra short|low duration|short duration|corporate bond|gilt|banking.?psu|credit risk|dynamic bond|floater|debt fund/.test(s))return'debt';if(/hybrid|balanced advantage|aggressive hybrid|conservative hybrid|multi asset|arbitrage/.test(s))return'hybrid';if(/index|etf|nifty|sensex|bse 500|index fund/.test(s))return'index';return'equity'}
 function categoryName(meta,name){return meta?.scheme_category||({equity:'Equity fund',debt:'Debt fund',hybrid:'Hybrid fund',index:'Index / passive fund'}[classifyScheme(meta,name)])}
-function setBenchmarkDefault(){const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';const el=$('benchmarkName');if(el){el.value=Array.from(el.options).some(o=>o.value===name||o.text===name)?name:'';state.benchmarkName=el.value}state.benchmarkSeries=[];if($('benchmarkStatus')){$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='No benchmark series loaded. '+(state.benchmarkName?'Selected benchmark: '+state.benchmarkName+'. Import its official daily TRI CSV to calculate relative metrics.':'Confirm the scheme benchmark in its latest SID or factsheet, then import the matching TRI series.')}}
+function setBenchmarkDefault(){
+ const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
+ const el=$('benchmarkName');
+ if(el){el.value=Array.from(el.options).some(o=>o.value===name||o.text===name)?name:'';state.benchmarkName=el.value}
+ state.benchmarkSeries=[];
+ if($('benchmarkMapping'))$('benchmarkMapping').textContent=state.benchmarkName||'No verified benchmark mapping for this scheme';
+ if($('benchmarkStatus')){$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent=state.benchmarkName?'Automatically mapping '+state.benchmarkName+' to NSE Indices TRI history…':'No verified Tier 1 benchmark mapping is stored for this scheme. FundLens will not infer one from category alone.'}
+}
 function parseCSVRows(text){const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());return lines.map(line=>{const out=[];let v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'&&q){v+='"';i++}else if(c==='"')q=!q;else if(c===','&&!q){out.push(v.trim());v=''}else v+=c}out.push(v.trim());return out})}
 function parseFlexibleDate(v){if(!v)return null;const s=String(v).trim();let m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[-/ ]([A-Za-z]{3,}|\d{1,2})[-/ ](\d{2,4})$/);if(m){const mon=Number(m[2])?Number(m[2])-1:new Date(m[2]+' 1, 2000').getMonth();let y=Number(m[3]);if(y<100)y+=y>=70?1900:2000;return new Date(y,mon,+m[1])}return parseDate(s)}
+async function loadAutomaticResearchInputs(request){
+ if(request!==state.loadRequest||!state.data.length)return;
+ $('automaticDataUpdated').textContent='Fetching RBI G-Sec and benchmark data…';
+ const rfTask=(async()=>{
+  try{
+   const res=await fetch('/api/risk-free-rate',{headers:{'Accept':'application/json'}});
+   if(!res.ok)throw new Error('RBI rates endpoint returned HTTP '+res.status);
+   const body=await res.json();
+   if(!Number.isFinite(Number(body.rate)))throw new Error('RBI rate response is invalid');
+   $('rfRate').value=Number(body.rate).toFixed(4);
+   $('rfRateDisplay').innerHTML='<b>'+Number(body.rate).toFixed(4)+'% p.a.</b><br>'+escapeHtml(body.security||'10-year Government of India security')+' · as of '+escapeHtml(body.asOf||'date not supplied')+'<br><span class="tiny">'+escapeHtml(body.source||'RBI')+(body.isFallback?' · fallback snapshot':' · automatically refreshed')+'</span>';
+   return {ok:true,body};
+  }catch(e){
+   $('rfRate').value='7.2178';
+   $('rfRateDisplay').innerHTML='<b>7.2178% p.a.</b><br>6.94% GS 2036 · as of 11 Nov 2026<br><span class="tiny">Official RBI fallback snapshot · live refresh failed</span>';
+   return {ok:false,error:e.message};
+  }
+ })();
+ let benchmarkResult={ok:false};
+ if(state.benchmarkName){
+  const apiName=state.benchmarkName.replace(/\s+TRI$/i,'').trim();
+  const supported=['NIFTY 50','NIFTY 100','NIFTY 500','NIFTY NEXT 50','NIFTY MIDCAP 150','NIFTY SMALLCAP 250'].includes(apiName.toUpperCase());
+  if(supported){
+   const start=dateKey(state.data[0].date),end=dateKey(state.data[state.data.length-1].date);
+   try{
+    const url='/api/benchmark?index='+encodeURIComponent(apiName.toUpperCase())+'&start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end);
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    const body=await res.json();
+    if(!res.ok)throw new Error(body.error||'NSE TRI endpoint returned HTTP '+res.status);
+    const data=(body.data||[]).map(x=>({date:parseFlexibleDate(x.date),value:Number(x.value)}))
+      .filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.value)&&x.value>0)
+      .sort((a,b)=>a.date-b.date);
+    if(data.length<30)throw new Error('Fewer than 30 TRI observations were returned.');
+    if(request!==state.loadRequest)return;
+    state.benchmarkSeries=data;
+    benchmarkResult={ok:true,body};
+    $('benchmarkMapping').textContent=state.benchmarkName+' · auto-mapped';
+    $('benchmarkStatus').className='data-status ok';
+    $('benchmarkStatus').textContent='Automatically loaded '+data.length.toLocaleString('en-IN')+' NSE TRI observations for '+state.benchmarkName+', '+data[0].date.toLocaleDateString('en-IN')+' to '+data.at(-1).date.toLocaleDateString('en-IN')+'. Exact-date matching only. Source: NSE Indices.';
+   }catch(e){
+    state.benchmarkSeries=[];
+    $('benchmarkStatus').className='data-status warn';
+    $('benchmarkStatus').textContent='Automatic TRI retrieval failed for '+state.benchmarkName+': '+e.message+'. Sharpe / Sortino remain available using the RBI proxy; Alpha / Beta / IR / tracking error are suppressed.';
+    benchmarkResult={ok:false,error:e.message};
+   }
+  }else{
+   state.benchmarkSeries=[];
+   $('benchmarkStatus').className='data-status warn';
+   $('benchmarkStatus').textContent='Automatic TRI retrieval is not currently connected for '+state.benchmarkName+'. No substitute index is used. Sharpe / Sortino remain available using the RBI proxy; benchmark-relative ratios are suppressed.';
+   benchmarkResult={ok:false,error:'Unsupported benchmark family'};
+  }
+ }else{
+  state.benchmarkSeries=[];
+  $('benchmarkStatus').className='data-status warn';
+  $('benchmarkStatus').textContent='No verified benchmark mapping is available for this scheme. Sharpe / Sortino use the RBI G-Sec proxy. Benchmark-relative Alpha / Beta / IR / tracking error are not estimated.';
+  benchmarkResult={ok:false,error:'No verified benchmark mapping'};
+ }
+ const rfResult=await rfTask;
+ if(request!==state.loadRequest)return;
+ $('automaticDataUpdated').textContent='G-Sec '+(rfResult.ok?'refreshed':'fallback')+' · TRI '+(benchmarkResult.ok?'refreshed':'not available');
+ renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare();
+}
 function uploadTriFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const rows=parseCSVRows(reader.result);if(rows.length<3)throw new Error('The CSV needs a header and at least two observations.');const header=rows[0].map(x=>x.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim());const dateIdx=header.findIndex(x=>/^(date|index date|nav date)$/.test(x));let valueIdx=header.findIndex(x=>/total returns index|total return index|tri value|index value|tri|close value|value$/.test(x)&&!x.includes('net total'));if(valueIdx<0)valueIdx=header.findIndex(x=>x.includes('net total return'));if(dateIdx<0||valueIdx<0)throw new Error('Required columns: Date and Total Returns Index (TRI).');const parsed=rows.slice(1).map(r=>({date:parseFlexibleDate(r[dateIdx]),value:Number(String(r[valueIdx]||'').replace(/,/g,''))})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.value)&&x.value>0).sort((a,b)=>a.date-b.date);const dedup=new Map(parsed.map(x=>[dateKey(x.date),x.value]));state.benchmarkSeries=Array.from(dedup,([k,value])=>({date:parseFlexibleDate(k),value})).sort((a,b)=>a.date-b.date);if(state.benchmarkSeries.length<30)throw new Error('Only '+state.benchmarkSeries.length+' valid rows found. At least 30 observations are required.');$('benchmarkStatus').className='data-status ok';$('benchmarkStatus').textContent='Loaded '+state.benchmarkSeries.length.toLocaleString('en-IN')+' TRI observations, '+state.benchmarkSeries[0].date.toLocaleDateString('en-IN')+' to '+state.benchmarkSeries.at(-1).date.toLocaleDateString('en-IN')+'.';renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare()}catch(e){state.benchmarkSeries=[];$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent=e.message;renderResearchMetrics()}};reader.onerror=()=>{$('benchmarkStatus').textContent='Could not read the selected file.';state.benchmarkSeries=[];renderResearchMetrics();renderRelativeRolling();renderCompare()};reader.readAsText(file)}
 
 function calcRelativeRolling(){
@@ -379,8 +448,6 @@ function renderDisclosureLens(){const r=referenceDisclosure[state.code];if(!r){$
 function renderGuidedResearch(){if(!state.data.length)return;const roll=state.rolling?.length?state.rolling:calcRolling(state.data,Number($('windowSlider')?.value||36),$('frequency')?.value||'weekly','cagr'),v=roll.map(x=>x.value),positive=v.length?v.filter(x=>x>0).length/v.length*100:NaN,med=median(v),dd=maxDrawdown(state.data);$('guidedPositive').textContent=Number.isFinite(positive)?positive.toFixed(1)+'%':'Not enough history';$('guidedMedian').textContent=Number.isFinite(med)?fmtPct(med):'—';$('guidedDrawdown').textContent=Number.isFinite(dd)?fmtPct(dd):'—';$('guidedPositiveNote').textContent=roll.length+' overlapping windows · '+Number($('windowSlider')?.value||36)+'-month holding period';$('guidedMedianNote').textContent='Median annualised CAGR across eligible start dates';const m=calcAdvancedStats(),kind=classifyScheme(state.meta,getName());let n=roll.length?'Across '+roll.length+' overlapping historical windows, '+positive.toFixed(1)+'% ended positive. The median annualised outcome was '+fmtPct(med)+'. Past outcomes do not predict future returns.':'Not enough history for this rolling window. Try a shorter holding period.';n+=Number.isFinite(m.beta)?' Against '+state.benchmarkName+', matched analysis shows '+fmtPct(m.excessCagr)+' CAGR difference over the common period. Open Advanced for risk-adjusted ratios.':' Benchmark-relative conclusions are withheld until a matched TRI is loaded. NAV-only data cannot show whether the fund beat its benchmark.';if(kind==='debt')n+=' For debt funds, also examine credit quality, yield and duration.';if(kind==='hybrid')n+=' For hybrid funds, inspect equity and debt exposures separately.';$('guidedNarrative').textContent=n}
 function setExperience(view){document.body.dataset.view=view;document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));try{sessionStorage.setItem('fundlens-view',view)}catch(e){}if(state.page==='compare')renderCompare()}
 document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.addEventListener('click',()=>setExperience(b.dataset.view)));
-$('benchmarkName')?.addEventListener('change',e=>{state.benchmarkName=e.target.value;state.benchmarkSeries=[];$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='Benchmark changed. Import matched daily TRI for '+state.benchmarkName+'.';renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare()});
-$('benchmarkFile')?.addEventListener('change',e=>uploadTriFile(e.target.files[0]));
 $('rfRate')?.addEventListener('input',()=>{renderResearchMetrics();renderGuidedResearch();renderCompare()});
 $('analysisPeriod')?.addEventListener('change',()=>{renderResearchMetrics();renderRelativeRolling();renderCompare()});
 
@@ -472,7 +539,7 @@ async function loadScheme(code){
    cached={meta:body.meta||{},data:parsed};state.cache.set(code,cached);
   }
   if(request!==state.loadRequest)return;
-  state.meta=cached.meta;state.data=cached.data;state.history=cached.data;state.range=state.data.length>1500?'3Y':'MAX';setBenchmarkDefault();updateOverview();
+  state.meta=cached.meta;state.data=cached.data;state.history=cached.data;state.range=state.data.length>1500?'3Y':'MAX';setBenchmarkDefault();updateOverview();loadAutomaticResearchInputs(request);
   if(state.page==='rolling')renderRolling();if(state.page==='risk')renderRisk();toast('Loaded '+state.data.length.toLocaleString('en-IN')+' NAV observations'+(state.cache.size>1?' · '+state.cache.size+' schemes cached':'')+'.');
  }catch(e){if(request!==state.loadRequest)return;$('apiState').textContent='DATA UNAVAILABLE';$('apiState').className='tag red';$('navChart').innerHTML='<div class="empty">'+e.message+'<br><a href="https://www.mfapi.in/docs/" target="_blank" rel="noopener">Check NAV API documentation ↗</a></div>';toast('Could not load this scheme. '+e.message)}
 }
