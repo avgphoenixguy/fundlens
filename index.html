@@ -510,43 +510,9 @@ const referenceDisclosure={
 function classifyScheme(meta,name){const s=((meta?.scheme_category||'')+' '+(meta?.scheme_name||name||'')).toLowerCase();if(/liquid|overnight|money market|ultra short|low duration|short duration|corporate bond|gilt|banking.?psu|credit risk|dynamic bond|floater|debt fund/.test(s))return'debt';if(/hybrid|balanced advantage|aggressive hybrid|conservative hybrid|multi asset|arbitrage/.test(s))return'hybrid';if(/index|etf|nifty|sensex|bse 500|index fund/.test(s))return'index';return'equity'}
 function categoryName(meta,name){return meta?.scheme_category||({equity:'Equity fund',debt:'Debt fund',hybrid:'Hybrid fund',index:'Index / passive fund'}[classifyScheme(meta,name)])}
 
-function schemeSubcategory(meta,name){
- const raw=String(meta?.scheme_category||'').toLowerCase();
- const combined=(raw+' '+String(name||'')).toLowerCase();
- const patterns=[
-  ['equity:flexi-cap',/flexi\s*cap/],['equity:large-and-mid-cap',/large\s*(?:&|and)\s*mid\s*cap/],
-  ['equity:multi-cap',/multi\s*cap/],['equity:large-cap',/large\s*cap/],['equity:mid-cap',/mid\s*cap/],
-  ['equity:small-cap',/small\s*cap/],['equity:focused',/focused/],['equity:value',/value\s*fund/],
-  ['equity:contra',/contra/],['equity:elss',/elss|tax\s*saver/],['equity:sectoral-thematic',/sectoral|thematic/],
-  ['hybrid:conservative',/conservative\s*hybrid/],['hybrid:aggressive',/aggressive\s*hybrid/],
-  ['hybrid:balanced-advantage',/balanced\s*advantage|dynamic\s*asset\s*allocation/],['hybrid:multi-asset',/multi\s*asset/],
-  ['hybrid:equity-savings',/equity\s*savings/],['hybrid:arbitrage',/arbitrage/],
-  ['debt:overnight',/overnight/],['debt:liquid',/\bliquid\b/],['debt:money-market',/money\s*market/],
-  ['debt:ultra-short',/ultra\s*short/],['debt:low-duration',/low\s*duration/],['debt:short-duration',/short\s*duration/],
-  ['debt:corporate-bond',/corporate\s*bond/],['debt:banking-psu',/banking\s*(?:and|&)\s*psu/],
-  ['debt:gilt',/gilt/],['debt:dynamic-bond',/dynamic\s*bond/],['debt:credit-risk',/credit\s*risk/],
-  ['debt:medium-duration',/medium\s*duration/],['debt:long-duration',/long\s*duration/],
-  ['passive:index',/index\s*(?:fund)?|\betf\b/]
- ];
- for(const [key,re] of patterns)if(re.test(combined))return key;
- const cleaned=raw.replace(/open ended schemes|close ended schemes|interval schemes|equity scheme|debt scheme|hybrid scheme|other scheme|fund/g,' ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
- return cleaned||'subcategory:unclassified';
-}
-function optionForScheme(name){
- const s=String(name||'').toLowerCase();
- if(/idcw|dividend|payout|reinvest(?:ment)?/.test(s))return'idcw';
- if(/growth/.test(s))return'growth';
- return'option:unclassified';
-}
 function normalizedBenchmark(name){
  return String(name||'').toLowerCase().replace(/total\s*returns?\s*index|total\s*return\s*index|\btri\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
 }
-function compareIdentity(item,disclosure){
- const name=item.meta?.scheme_name||item.meta?.schemeName||'';
- const plan=/\bdirect\b/i.test(name)?'direct':/\bregular\b/i.test(name)?'regular':'unverified';
- return {subcategory:schemeSubcategory(item.meta,name),plan,option:optionForScheme(name),benchmark:normalizedBenchmark(disclosure?.performance?.benchmark||''),benchmarkLabel:disclosure?.performance?.benchmark||''};
-}
-
 function setBenchmarkDefault(){
  const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
  const el=$('benchmarkName');
@@ -1175,33 +1141,13 @@ async function addCompare(code){
  code=Number(code);
  if(state.compare.includes(code))return toast('This scheme is already in your comparison.');
  if(state.compare.length>=3)return toast('You can compare up to three schemes.');
- toast('Checking scheme category, plan, option and benchmark…');
+ toast('Checking scheme NAV data…');
  const candidate=await ensureCompare(code);
  if(!candidate.data.length)return toast('Scheme NAV data could not be validated. It was not added.');
- const candidateDisclosure=await ensureAmfiForCompare(candidate);
- const candidateId=compareIdentity(candidate,candidateDisclosure);
- if(state.compare.length){
-  const existingItems=await Promise.all(state.compare.map(async existingCode=>{
-   const item=await ensureCompare(existingCode);
-   const disclosure=await ensureAmfiForCompare(item);
-   return {item,disclosure};
-  }));
-  for(const existing of existingItems){
-   const existingId=compareIdentity(existing.item,existing.disclosure);
-   const differences=[];
-   if(!candidateId.subcategory||candidateId.subcategory==='subcategory:unclassified'||candidateId.subcategory!==existingId.subcategory)differences.push('category sub-type');
-   if(!candidateId.plan||candidateId.plan==='unverified'||candidateId.plan!==existingId.plan)differences.push('plan');
-   if(!candidateId.option||candidateId.option==='option:unclassified'||candidateId.option!==existingId.option)differences.push('option');
-   if(!candidateId.benchmark||!existingId.benchmark)differences.push('benchmark not confirmed');
-   else if(candidateId.benchmark!==existingId.benchmark)differences.push('benchmark');
-   if(differences.length)return toast('Not added: '+differences.join(', ')+' does not match '+(existing.item.meta?.scheme_name||'the selected scheme')+'.');
-  }
- }
  state.compare.push(code);
  renderCompare();
- toast('Scheme added. The comparison set passed the like-for-like checks.');
+ toast('Scheme added to comparison.');
 }
-
 function removeCompare(code){state.compare=state.compare.filter(x=>x!==code);renderCompare()}
 async function ensureCompare(code){if(code===state.code)return {code,meta:state.meta,data:state.data};const cached=state.cache.get(Number(code));if(cached)return {code,meta:cached.meta,data:cached.data};try{const r=await fetch(API+'/'+code);if(!r.ok)throw new Error('NAV request failed');const b=await r.json();const d=(b.data||[]).map(x=>({date:parseDate(x.date),nav:Number(x.nav)})).filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.nav)&&x.nav>0).sort((a,b)=>a.date-b.date);const value={meta:b.meta||{},data:d};state.cache.set(Number(code),value);return {code,meta:value.meta,data:value.data}}catch(e){return {code,meta:{scheme_name:'Scheme '+code},data:[]}}}
 async function ensureAmfiForCompare(item){
@@ -1238,13 +1184,10 @@ async function renderCompare(){
  const disclosures=await Promise.all(items.map(ensureAmfiForCompare));
  const amfiByCode=new Map(items.map((x,i)=>[String(x.code),disclosures[i]||{}]));
  const periodKey=({'12':'1Y','36':'3Y','60':'5Y','120':'10Y'})[$('analysisPeriod')?.value]||'';
- const identities=items.map((x,i)=>compareIdentity(x,disclosures[i]||{}));
- const sameSubcategory=identities.length>0&&identities.every(x=>x.subcategory===identities[0].subcategory);
- const samePlan=identities.length>0&&identities.every(x=>x.plan===identities[0].plan);
- const sameOption=identities.length>0&&identities.every(x=>x.option===identities[0].option);
- const sameBenchmark=identities.length>0&&!!identities[0].benchmark&&identities.every(x=>x.benchmark===identities[0].benchmark);
+ const benchmarkNames=disclosures.map(x=>normalizedBenchmark(x?.performance?.benchmark||''));
+ const sameBenchmark=benchmarkNames.length>0&&!!benchmarkNames[0]&&benchmarkNames.every(x=>x===benchmarkNames[0]);
  const sharedLatestNavDate=items.length>0&&items.every(x=>x.data.length&&dateKey(x.data[x.data.length-1].date)===dateKey(items[0].data[items[0].data.length-1].date));
- const benchmarkMatchesLoadedSeries=sameBenchmark&&sharedLatestNavDate&&state.benchmarkSeries.length>0&&state.benchmarkFrequency==='weekly'&&state.benchmarkPeriodsPerYear===52&&normalizedBenchmark(state.benchmarkName)===identities[0].benchmark;
+ const benchmarkMatchesLoadedSeries=sameBenchmark&&sharedLatestNavDate&&state.benchmarkSeries.length>0&&state.benchmarkFrequency==='weekly'&&state.benchmarkPeriodsPerYear===52&&normalizedBenchmark(state.benchmarkName)===benchmarkNames[0];
  const comparisonStats=new Map(items.map(x=>[x.code,benchmarkMatchesLoadedSeries?calcAdvancedStats(x.data,state.benchmarkSeries):{}]));
  const val=(code,key,digits=2)=>{const v=comparisonStats.get(code)?.[key];return Number.isFinite(v)?fmtNum(v,digits):'Unavailable'};
  const pct=(code,key)=>{const v=comparisonStats.get(code)?.[key];return Number.isFinite(v)?fmtPct(v):'Unavailable'};
@@ -1278,10 +1221,8 @@ async function renderCompare(){
   const r=navRiskFor(x.data);
   return '<div style="margin:12px 0"><div class="result-name">'+escapeHtml(x.meta.scheme_name||('Scheme '+x.code))+'</div><div class="fund-meta">Volatility '+fmtPct(r.vol)+' · Max drawdown '+fmtPct(r.drawdown)+'</div></div>';
  }).join('');
- const identityOk=sameSubcategory&&samePlan&&sameOption&&sameBenchmark;
- const identityText=items.length<2?'Add a second scheme for a like-for-like peer comparison.':identityOk?'Like-for-like set: '+identities[0].subcategory+' · '+identities[0].plan+' plan · '+identities[0].option+' option · '+identities[0].benchmarkLabel+'.':'Scheme identity is not fully confirmed. Treat the table as descriptive, not like-for-like.';
- const triText=benchmarkMatchesLoadedSeries?'FundLens Alpha, Beta and tracking-error estimates use matched weekly fund NAV and TRI-derived benchmark observations. Estimates are annualised using 52 periods per year.':!sharedLatestNavDate?'The selected schemes do not share the same latest NAV date. Benchmark regression estimates are withheld until the comparison dates align.': 'Mapped weekly TRI-derived observations are not loaded for this comparison set. FundLens Alpha, Beta and tracking error remain unavailable; no proxy series is substituted.';
- $('compareRisk').innerHTML+='<div class="data-status '+(items.length<2||identityOk?'ok':'warn')+'">'+escapeHtml(identityText)+'</div><div class="metric-caption">* NAV-only Sharpe / Sortino use the current RBI long-dated G-Sec yield proxy held constant through the sample. † Official AMFI Information Ratio is a published source value; AMFI trailing returns are report-date snapshots, not weekly regression inputs. '+escapeHtml(triText)+'</div>';
+ const triText=benchmarkMatchesLoadedSeries?'Benchmark-relative Alpha, Beta and tracking-error estimates use matched weekly fund NAV and TRI-derived benchmark observations. Estimates are annualised using 52 periods per year.':!sameBenchmark?'Selected schemes have different or unconfirmed benchmark mappings. Benchmark-relative Alpha, Beta and tracking error are withheld; NAV-based and AMFI-published measures remain available.':!sharedLatestNavDate?'The selected schemes do not share the same latest NAV date. Benchmark regression estimates are withheld until the comparison dates align.':'Mapped weekly TRI-derived observations are not loaded for this comparison set. Benchmark-relative Alpha, Beta and tracking error remain unavailable; no proxy series is substituted.';
+ $('compareRisk').innerHTML+='<div class="data-status ok">Descriptive comparison: schemes are not restricted to matching categories, plans, options or benchmarks. Review each scheme column and its own benchmark before drawing conclusions.</div><div class="metric-caption">* NAV-only Sharpe / Sortino use the current RBI long-dated G-Sec yield proxy held constant through the selected NAV sample. † Official AMFI Information Ratio is a published source value; AMFI trailing returns are report-date snapshots, not weekly regression inputs. '+escapeHtml(triText)+'</div>';
 }
 
 
