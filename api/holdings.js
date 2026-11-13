@@ -314,7 +314,7 @@ async function getSchemeMeta(code) {
   if (!name || !fundHouse) throw new Error("Scheme metadata did not identify a scheme and AMC");
   return { name, fundHouse, category: String(meta.scheme_category || "") };
 }
-async function resolvePortfolio(scheme) {
+async function resolvePortfolio(scheme, debug = false) {
   const source = Object.values(AMC_SOURCES).find(x => x.match.test(scheme.fundHouse));
   if (!source) throw Object.assign(new Error("Automatic public holdings retrieval is not yet supported for " + scheme.fundHouse + ". No substitute or estimated holdings were used."), { status: 422, fundHouse: scheme.fundHouse });
   const html = await fetchText(source.page, source.page);
@@ -333,8 +333,20 @@ async function resolvePortfolio(scheme) {
   if (!source.allowedHosts.includes(fileHost)) throw new Error("The discovered workbook host is not in the AMC allowlist");
   const buf = await fetchBinary(fileUrl, source.page);
   if (buf.readUInt32LE(0) !== 0x04034b50) throw new Error("The AMC file is not an XLSX workbook; it was not parsed or approximated");
-  const parsed = parsePortfolio(buf);
   const asOf = chosen.asOf || parseDisclosureDate(fileUrl);
+  if (debug) {
+    const rows = parseXlsxRows(buf);
+    return {
+      debug: true,
+      schemeName: scheme.name,
+      fundHouse: scheme.fundHouse,
+      sourcePage: source.page,
+      sourceFile: fileUrl,
+      asOf,
+      previewRows: rows.slice(0, 45).map(row => row.map(cell => cell ? cell.value : "").slice(0, 16))
+    };
+  }
+  const parsed = parsePortfolio(buf);
   const ageDays = asOf ? Math.floor((Date.now() - new Date(asOf + "T00:00:00Z").getTime()) / 86400000) : null;
   return {
     schemeCode: Number(scheme.schemeCode),
@@ -364,7 +376,7 @@ module.exports = async function handler(req, res) {
   if (!Number.isSafeInteger(code) || code <= 0) return res.status(400).json({ error: "A valid MFAPI schemeCode is required." });
   try {
     const scheme = await getSchemeMeta(code);
-    const result = await resolvePortfolio({ ...scheme, schemeCode: code });
+    const result = await resolvePortfolio({ ...scheme, schemeCode: code }, req.query.debug === "1");
     return res.status(200).json(result);
   } catch (error) {
     const status = Number(error.status) || 502;
