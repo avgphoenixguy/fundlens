@@ -32,7 +32,9 @@ function parseRbi(html) {
   return {...chosen,asOf,source:"Reserve Bank of India Current Rates",sourceUrl:"https://www.rbi.org.in/",isFallback:false};
 }
 module.exports = async function handler(req,res) {
-  res.setHeader("Cache-Control","s-maxage=3600, stale-while-revalidate=21600");
+  res.setHeader("Cache-Control","public, s-maxage=3600, stale-while-revalidate=21600");
+  res.setHeader("Access-Control-Allow-Methods","GET, OPTIONS");
+  if (req.method === "OPTIONS") return res.status(204).end();
   res.setHeader("Access-Control-Allow-Origin","*");
   if (req.method !== "GET") return res.status(405).json({error:"Method not allowed"});
   try {
