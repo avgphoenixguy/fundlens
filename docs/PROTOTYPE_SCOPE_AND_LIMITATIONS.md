@@ -24,19 +24,18 @@ The product proposition is a category-aware, explainable research workspace with
 | Risk-adjusted scorecard | NAV Sharpe / Sortino, matched Alpha / Beta / Information Ratio / tracking error | Risk-free assumption; benchmark TRI required for benchmark metrics |
 | Category-aware lens | Distinct active equity, index / passive, debt and hybrid research priorities | Heuristic scheme classification plus user verification |
 | Dated scheme references | Selected-scheme AUM, costs, riskometer, benchmark and source snapshots | Curated dated sources, not updated by NAV API |
-| Portfolio overlap | Pairwise stock-weight overlap, repeated positions, investor-weighted blended exposure and sector totals | Combined CSV of dated scheme holdings |
+| Portfolio overlap | Not included. Deliberately excluded after finding an Angel One-hosted NXT overlap tool | Not a FundLens differentiator |
 | Comparison | Up to three scheme comparison and NAV-derived return / risk summaries | Loaded NAV histories; matching category / plan / option still matters |
 
 ## What is not an automatic live integration
 
 The prototype does not have a production data agreement, API key or backend connection for:
 - Official benchmark TRI history from NSE Indices or other index providers.
-- Latest holdings files for every AMC and scheme.
 - Universal live TER, AUM, YTM, duration, credit and manager disclosures.
 - Automatic effective-dated mapping from scheme code to the current Tier 1 benchmark.
 - User portfolios from Angel One accounts or demat / CAS statements.
 
-Benchmark and holdings files are imported manually and held only in browser memory. Dated curated data should not be described as live.
+Benchmark TRI files are imported manually and held only in browser memory. Dated curated data should not be described as live.
 
 ## Why these gaps remain
 
@@ -72,3 +71,7 @@ The original product hypothesis requires user research and a current hands-on An
 - Does the workflow improve investor understanding without implying a recommendation?
 
 Treat these as hypotheses and validation tasks until evidence is collected.
+
+## Competitive finding: portfolio overlap
+
+An Angel One-hosted NXT Fund & Stock Lab page advertises an Overlap Checker, pairwise overlap matrix, common holdings, stock search across schemes and portfolio visualisations. The primary Angel One mutual-fund user guide documents individual scheme holdings and peer comparison, but does not describe cross-scheme overlap in that journey. The NXT page is a separate research surface, and the indexed page reports that its mutual-fund dataset must be refreshed from an upstream API; the refresh controls are protected. Thus the feature exists on an Angel One-hosted surface, but public evidence does not establish that it is fully populated and available to every retail app user. FundLens excludes a duplicate overlap widget and treats integration / discoverability only as a possible future product question, subject to first-party verification.
