@@ -21,12 +21,6 @@ const AMC_SOURCES = {
       return null;
     }
   },
-  hdfc: {
-    label: "HDFC Mutual Fund",
-    page: "https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio",
-    match: /hdfc/i,
-    allowedHosts: ["www.hdfcfund.com", "files.hdfcfund.com"]
-  }
 };
 
 const MONTHS = {
@@ -334,6 +328,7 @@ async function resolvePortfolio(scheme) {
   if (buf.readUInt32LE(0) !== 0x04034b50) throw new Error("The AMC file is not an XLSX workbook; it was not parsed or approximated");
   const parsed = parsePortfolio(buf);
   const asOf = chosen.asOf || parseDisclosureDate(fileUrl);
+  const ageDays = asOf ? Math.floor((Date.now() - new Date(asOf + "T00:00:00Z").getTime()) / 86400000) : null;
   return {
     schemeCode: Number(scheme.schemeCode),
     schemeName: scheme.name,
@@ -342,6 +337,8 @@ async function resolvePortfolio(scheme) {
     sourcePage: source.page,
     sourceFile: fileUrl,
     asOf,
+    ageDays: Number.isFinite(ageDays) ? ageDays : null,
+    stale: !Number.isFinite(ageDays) || ageDays > 60,
     retrievedAt: new Date().toISOString(),
     holdings: parsed.holdings,
     equityCoveragePct: Number(parsed.equityCoveragePct.toFixed(4)),
