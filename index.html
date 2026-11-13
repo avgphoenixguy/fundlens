@@ -523,7 +523,6 @@ function benchmarkMappingSource(){
  return state.benchmarkName?'configured fallback mapping; source not verified':'no verified benchmark mapping';
 }
 function setBenchmarkDefault(){
-function setBenchmarkDefault(){
  const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
  const el=$('benchmarkName');
  if(el){el.value=Array.from(el.options).some(o=>o.value===name||o.text===name)?name:'';state.benchmarkName=el.value}
