@@ -27,6 +27,30 @@
 .overlap-table td,.overlap-table th{font-size:10px}
 .overlap-source{font-size:10px;line-height:1.6;color:#718096}
 .overlap-source a{color:#147b55;overflow-wrap:anywhere}
+
+.overlap-visuals{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:14px;margin:14px 0}
+.overlap-visual-card{border:1px solid #e8edf1;border-radius:12px;padding:14px;background:#fff;min-width:0}
+.overlap-visual-card .card-title{font-size:13px}
+.overlap-visual-card .card-sub{line-height:1.5}
+.overlap-heatmap-wrap{overflow-x:auto;margin-top:8px}
+.overlap-heatmap{width:100%;min-width:460px;border-collapse:separate;border-spacing:4px;table-layout:fixed}
+.overlap-heatmap th{border:0;padding:6px 4px;text-transform:none;letter-spacing:0;font-size:9px;line-height:1.3;color:#65758a}
+.overlap-heatmap th.matrix-label{text-align:left;width:112px}
+.overlap-heatmap td{border:0;border-radius:7px;padding:8px 3px;text-align:center;font-size:11px;font-weight:850;vertical-align:middle}
+.overlap-heatmap td small{display:block;font-size:8px;font-weight:650;opacity:.86;margin-top:2px}
+.heatmap-scale{display:flex;align-items:center;gap:7px;margin-top:9px;color:#8794a3;font-size:9px}
+.heatmap-scale .scale-bar{width:76px;height:8px;border-radius:20px;background:linear-gradient(90deg,rgba(22,131,93,.12),rgba(22,131,93,.9))}
+.donut-layout{display:flex;align-items:center;gap:12px;margin-top:6px;min-width:0}
+.sector-donut{width:158px;max-width:44%;height:auto;flex:none}
+.sector-legend{list-style:none;margin:0;padding:0;display:grid;gap:7px;min-width:0;flex:1}
+.sector-legend li{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:7px;font-size:9px;color:#526378}
+.sector-swatch{width:9px;height:9px;border-radius:3px;display:block}
+.sector-legend .sector-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.sector-legend .sector-values{display:block;color:#8b98a7;font-size:8px;font-weight:600;margin-top:2px}
+.sector-legend b{font-size:10px;color:#2e4055}
+@media(max-width:900px){.overlap-visuals{grid-template-columns:1fr}}
+@media(max-width:650px){.donut-layout{align-items:flex-start}.sector-donut{width:132px;max-width:42%}.overlap-heatmap{min-width:420px}}
+
 @media(max-width:900px){.overlap-two{grid-template-columns:1fr}}
 @media(max-width:650px){.overlap-fund{grid-template-columns:minmax(0,1fr) 90px auto;gap:7px;padding:9px}.overlap-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.overlap-search{grid-template-columns:1fr}.overlap-search button{width:100%}}
 
@@ -1012,6 +1036,46 @@ function portfolioPairs(loaded){
  }
  return pairs;
 }
+const OVERLAP_CHART_COLORS=['#177a59','#3f9d7b','#78bda1','#6f91a8','#d0a45d','#a17d9d','#9aa8b6','#c3ccd4'];
+function portfolioShortLabel(fund){
+ return String(fund.name||'Mutual fund').replace(/\s*-\s*Direct\s*Plan\s*-\s*Growth.*$/i,'').replace(/\s+Fund$/i,'').trim()||'Mutual fund';
+}
+function overlapHeatmapMarkup(loaded,pairs){
+ const pairMap=new Map(pairs.map(p=>[[Math.min(p.a.code,p.b.code),Math.max(p.a.code,p.b.code)].join(':'),p]));
+ const maxOverlap=Math.max(0,...pairs.map(p=>p.overlap));
+ const header=loaded.map(f=>'<th scope="col" title="'+escapeHtml(f.name)+'">'+escapeHtml(portfolioShortLabel(f))+'</th>').join('');
+ const rows=loaded.map(rowFund=>{
+  const cells=loaded.map(colFund=>{
+   if(rowFund.code===colFund.code)return '<td style="background:#f1f4f6;color:#9aa5b1">—</td>';
+   const pair=pairMap.get([Math.min(rowFund.code,colFund.code),Math.max(rowFund.code,colFund.code)].join(':'));
+   if(!pair)return '<td style="background:#f5f7f9;color:#9aa5b1">N/A</td>';
+   const intensity=maxOverlap>0?Math.max(0,Math.min(1,pair.overlap/maxOverlap)):0;
+   const alpha=.12+intensity*.78;
+   const textColor=alpha>.56?'#fff':'#294257';
+   return '<td title="'+escapeHtml(pair.a.name)+' × '+escapeHtml(pair.b.name)+' · '+fmtNum(pair.overlap,2)+'% overlap · '+pair.common.length+' shared ISINs" style="background:rgba(22,131,93,'+alpha.toFixed(2)+');color:'+textColor+'">'+fmtNum(pair.overlap,2)+'%<small>'+pair.common.length+' shared</small></td>';
+  }).join('');
+  return '<tr><th scope="row" class="matrix-label" title="'+escapeHtml(rowFund.name)+'">'+escapeHtml(portfolioShortLabel(rowFund))+'</th>'+cells+'</tr>';
+ }).join('');
+ return '<div class="overlap-heatmap-wrap"><table class="overlap-heatmap" aria-label="Pairwise fund overlap heatmap"><thead><tr><th class="matrix-label">Fund</th>'+header+'</tr></thead><tbody>'+rows+'</tbody></table></div><div class="heatmap-scale"><span>Lower overlap</span><span class="scale-bar"></span><span>Higher overlap</span></div><div class="metric-caption">Each off-diagonal cell shows the pairwise overlap: the sum of the lower disclosed NAV weight for every shared ISIN. Hover over a cell for the exact fund pair and shared-security count.</div>';
+}
+function sectorDonutMarkup(sectors){
+ const valid=sectors.filter(x=>Number.isFinite(Number(x[1]))&&Number(x[1])>0);
+ const total=valid.reduce((sum,x)=>sum+Number(x[1]),0);
+ if(!valid.length||total<=0)return '<div class="empty">No classified listed-equity sector exposure is available for this selection.</div>';
+ const visible=valid.slice(0,7).map(x=>({name:x[0],value:Number(x[1])}));
+ if(valid.length>7)visible.push({name:'Other sectors',value:valid.slice(7).reduce((sum,x)=>sum+Number(x[1]),0)});
+ const radius=54,circumference=2*Math.PI*radius;
+ let offset=0;
+ const slices=visible.map((item,i)=>{
+  const length=item.value/total*circumference;
+  const color=OVERLAP_CHART_COLORS[i%OVERLAP_CHART_COLORS.length];
+  const circle='<circle cx="72" cy="72" r="'+radius+'" fill="none" stroke="'+color+'" stroke-width="19" stroke-dasharray="'+length.toFixed(3)+' '+(circumference-length).toFixed(3)+'" stroke-dashoffset="'+(-offset).toFixed(3)+'" transform="rotate(-90 72 72)"><title>'+escapeHtml(item.name)+': '+fmtNum(item.value/total*100,1)+'% of classified equity exposure</title></circle>';
+  offset+=length;
+  return {circle,name:item.name,value:item.value,color,share:item.value/total*100};
+ });
+ const legend=slices.map(x=>'<li><span class="sector-swatch" style="background:'+x.color+'"></span><span class="sector-name" title="'+escapeHtml(x.name)+'">'+escapeHtml(x.name)+'<span class="sector-values">'+fmtNum(x.value,2)+'% of modelled NAV</span></span><b>'+fmtNum(x.share,1)+'%</b></li>').join('');
+ return '<div class="donut-layout"><svg class="sector-donut" viewBox="0 0 144 144" role="img" aria-label="Sector exposure donut chart"><circle cx="72" cy="72" r="'+radius+'" fill="none" stroke="#edf1f4" stroke-width="19"/>'+slices.map(x=>x.circle).join('')+'<text x="72" y="67" text-anchor="middle" font-size="10" font-weight="800" fill="#748295">CLASSIFIED</text><text x="72" y="81" text-anchor="middle" font-size="11" font-weight="850" fill="#26394e">EQUITY</text></svg><ul class="sector-legend">'+legend+'</ul></div><div class="metric-caption">Donut slices show each sector as a share of the classified listed-equity exposure. The smaller NAV figures show the corresponding contribution to the hypothetical combined portfolio. Debt, cash, derivatives and unclassified positions are excluded.</div>';
+}
 function renderPortfolioAnalysis(){
  const root=$('overlapAnalysis');
  const loaded=state.portfolioFunds.filter(f=>f.status==='ready'&&f.data);
@@ -1064,6 +1128,7 @@ function renderPortfolioAnalysis(){
   (errors.length?'<div class="warning-box">'+errors.length+' selected scheme(s) could not be included because validated public holdings were unavailable. Results below include only the '+loaded.length+' successfully validated scheme(s).</div>':'')+
   (stale.length?'<div class="warning-box">At least one disclosure is older than 45 days. Results are historical snapshots, not current holdings. Review each source date before interpreting overlap.</div>':'')+
   '<div class="overlap-kpis"><div class="overlap-kpi"><span>Highest pairwise overlap</span><strong>'+fmtNum(overlapTop,2)+'%</strong><small>Conservative min-weight method</small></div><div class="overlap-kpi"><span>Common securities</span><strong>'+commonAcross+'</strong><small>Held by at least two selected schemes</small></div><div class="overlap-kpi"><span>Selected schemes</span><strong>'+loaded.length+'</strong><small>With validated holdings files</small></div><div class="overlap-kpi"><span>Unique securities</span><strong>'+stocks.length+'</strong><small>ISIN-matched across selected funds</small></div></div>'+
+  '<div class="overlap-visuals"><section class="overlap-visual-card"><div class="card-head"><div><div class="card-title">Fund-to-fund overlap heatmap</div><div class="card-sub">Compare the shared listed-equity exposure across every selected fund pair.</div></div><span class="tag">PAIRWISE</span></div>'+overlapHeatmapMarkup(loaded,pairs)+'</section><section class="overlap-visual-card"><div class="card-head"><div><div class="card-title">Combined exposure by sector</div><div class="card-sub">Allocation-weighted sector mix across the selected schemes.</div></div><span class="tag">DONUT</span></div>'+sectorDonutMarkup(sectors)+'</section></div>'+
   '<div class="overlap-two"><div><div class="card" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Pairwise portfolio overlap</div><div class="card-sub">Sum of the lower of the two schemes’ NAV weights for each matching ISIN.</div></div></div><div class="table-scroll"><table class="overlap-table"><thead><tr><th>Scheme pair</th><th>Overlap</th><th>Shared securities</th></tr></thead><tbody>'+pairRows+'</tbody></table></div></div>'+
   '<div class="card section-gap" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Common securities behind the overlap</div><div class="card-sub">Top 20 shared positions by overlap contribution. Each weight is a percentage of the respective scheme NAV.</div></div></div><div class="table-scroll"><table class="overlap-table"><thead><tr><th>Scheme pair</th><th>Security / ISIN</th><th>Weight A</th><th>Weight B</th><th>Contribution</th></tr></thead><tbody>'+(commonRows||'<tr><td colspan="5">No common ISINs were found for the selected schemes.</td></tr>')+'</tbody></table></div></div>'+
   '<div class="card section-gap" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Sector exposure</div><div class="card-sub">Weighted contribution to selected-fund portfolio NAV.</div></div></div><div class="table-scroll"><table><thead><tr><th>Sector</th><th>Exposure</th></tr></thead><tbody>'+sectorRows+'</tbody></table></div></div></div>'+
