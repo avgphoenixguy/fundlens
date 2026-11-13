@@ -61,16 +61,12 @@ Alpha is an estimate that is sensitive to benchmark choice, sample period and as
 Sample standard deviation of daily active return `(r_f - r_b)` × `√252`.
 
 ### Information Ratio
-For equity-oriented schemes, FundLens' estimate is:
 
-`mean(daily arithmetic active return) / sample_sd(daily arithmetic active return)`.
+For equity-oriented schemes, FundLens displays an **annualised research estimate**:
 
-The implementation does **not** multiply this daily estimate by `√252`. SEBI Circular SEBI/HO/IMD/IMD-PoD-2/P/CIR/2025/6 (17 January 2025) defines IR using portfolio return less benchmark return divided by standard deviation of excess return, specifies the scheme's Tier 1 benchmark, and specifies daily return values / arithmetic daily portfolio returns. The AMC / AMFI's official disclosed IR should be used for regulatory comparison; the FundLens estimate is explicitly a research calculation and can differ because of date, source and implementation choices.
+mean(daily arithmetic active return) / sample_sd(daily arithmetic active return) × √252.
 
-Sources:
-- [SEBI circular, 17 January 2025](https://www.sebi.gov.in/legal/circulars/jan-2025/disclosure-of-risk-adjusted-return-information-ratio-ir-for-mutual-fund-schemes-_90928.html)
-- [SEBI Master Circular for Mutual Funds, 20 March 2026, section 6.10](https://www.sebi.gov.in/sebi_data/attachdocs/mar-2026/1774024028162.pdf)
-- [AMFI Information Ratio page](https://www.amfiindia.com/otherdata/fund-performance/information-ratio)
+The √252 factor annualises the daily ratio using the same 252-observation convention used for daily volatility and tracking error. SEBI Circular SEBI/HO/IMD/IMD-PoD-2/P/CIR/2025/6 (17 January 2025) specifies the portfolio-minus-Tier-1-benchmark excess-return formula, requires daily return values and arithmetic daily portfolio returns, but the circular's formula text does not itself state an annualisation multiplier. AMFI's explanatory illustration annualises the numerator / denominator using the observation frequency. Therefore FundLens labels its result as an annualised research estimate, not as the AMC / AMFI regulatory disclosure. For a regulatory or factsheet comparison, use the scheme's official published IR and methodology / period.
 
 ### Benchmark CAGR / excess CAGR
 Fund and benchmark CAGR are calculated across the same first and last matched NAV / TRI observations. Excess CAGR is fund CAGR less benchmark CAGR over those dates.
