@@ -103,6 +103,16 @@ To publish the current `main` source to Cloudflare Workers, use:
 
 The `wrangler.jsonc` build step copies `index.html` into the configured static-assets directory. The Worker routes `/api/*` requests to the existing API handlers and serves other requests from the static-assets binding. A plain static server only serves the front end, not the data APIs.
 
+## Cloudflare Workers deployment
+
+The canonical public URL is [https://fundlens.krishnalahoti2004.workers.dev/](https://fundlens.krishnalahoti2004.workers.dev/). The repository includes:
+
+- `wrangler.jsonc`: builds `dist/index.html`, configures static assets and sends `/api/*` requests through the Worker first.
+- `cloudflare/worker.js`: routes the five data APIs to the existing handlers and serves static assets for the rest of the site.
+- `/api/health`: a lightweight deployment check that lists the registered API routes.
+
+For a manual deployment from the repository root, run `npx wrangler deploy`. When using Cloudflare Workers Builds, connect this repository on the `main` branch and use `npx wrangler deploy` as the deploy command. After a deployment, check `/api/health`, then test the data routes before relying on source-dependent outputs.
+
 ## Limitations
 
 - AMFI name matching is automated and may fail for renamed, legacy or unusual scheme names. A match must pass a similarity threshold.
