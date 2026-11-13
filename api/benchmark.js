@@ -1,7 +1,6 @@
 // Cached server-side proxy for NSE Indices' public historical TRI endpoint.
-// The endpoint is used by NSE Indices' Historical Data Reports page but is not a documented
-// commercial API. NSE's web interface limits TRI requests to approximately 365 days, so
-// long windows are retrieved in date chunks. Fail closed; never substitute a price index.
+// TRI is required for fund benchmarking because it includes reinvested dividends.
+// The endpoint is undocumented; fail closed and never substitute a price index.
 const ALLOWED = new Set([
   "NIFTY 50",
   "NIFTY 100",
@@ -11,6 +10,8 @@ const ALLOWED = new Set([
   "NIFTY SMALLCAP 250"
 ]);
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+
 function fromIso(iso) {
   const d = new Date(iso + "T00:00:00Z");
   if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
@@ -21,6 +22,43 @@ function fmtDate(d) {
   return String(d.getUTCDate()).padStart(2,"0") + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear();
 }
 function addDays(d,n) { const x=new Date(d);x.setUTCDate(x.getUTCDate()+n);return x; }
+
+function cookieHeader(headers) {
+  let values = [];
+  if (typeof headers.getSetCookie === "function") {
+    values = headers.getSetCookie();
+  } else {
+    const single = headers.get("set-cookie");
+    if (single) values = [single];
+  }
+  return values
+    .map(value => String(value).split(";")[0].trim())
+    .filter(Boolean)
+    .join("; ");
+}
+
+async function bootstrapSession(host) {
+  // NSE/Akamai occasionally expects a browser-like visit to the report page
+  // before its ASP.NET data endpoint is called. Preserve cookies when issued.
+  // This is a lightweight session bootstrap, not a JavaScript challenge solver.
+  try {
+    const response = await fetch(host.referer, {
+      method: "GET",
+      headers: {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-IN,en;q=0.9"
+      },
+      signal: AbortSignal.timeout(4500),
+      redirect: "follow"
+    });
+    const cookies = cookieHeader(response.headers);
+    return { cookies, status: response.status, contentType: response.headers.get("content-type") || "" };
+  } catch (error) {
+    return { cookies: "", status: null, contentType: "", warning: error.message || "session bootstrap failed" };
+  }
+}
+
 function parseRows(raw) {
   let rows = raw && raw.d;
   if (typeof rows === "string") rows = JSON.parse(rows || "[]");
@@ -32,7 +70,7 @@ function parseRows(raw) {
     else {
       const p=rawDate.split(/ +/);
       if(p.length===3) {
-        const month=MONTHS.indexOf(p[1])+1;
+        const month=MONTHS.findIndex(x=>x.toLowerCase()===p[1].slice(0,3).toLowerCase())+1;
         if(month>0)date=p[2]+"-"+String(month).padStart(2,"0")+"-"+p[0].padStart(2,"0");
       }
     }
@@ -41,6 +79,7 @@ function parseRows(raw) {
     return date&&Number.isFinite(value)&&value>0?{date,value}:null;
   }).filter(Boolean);
 }
+
 async function fetchChunk(index,start,end) {
   const cinfo="{'name':'"+index+"','startDate':'"+fmtDate(start)+"','endDate':'"+fmtDate(end)+"','indexName':'"+index+"'}";
   const hosts=[
@@ -50,49 +89,65 @@ async function fetchChunk(index,start,end) {
   const errors=[];
   for(const host of hosts){
     try{
+      const session = await bootstrapSession(host);
+      const headers = {
+        "Content-Type":"application/json; charset=UTF-8",
+        "Accept":"application/json, text/javascript, */*; q=0.01",
+        "Accept-Language":"en-IN,en;q=0.9",
+        "Origin":host.base,
+        "X-Requested-With":"XMLHttpRequest",
+        "Referer":host.referer,
+        "User-Agent":USER_AGENT
+      };
+      if (session.cookies) headers.Cookie = session.cookies;
+
       const response=await fetch(host.base+"/Backpage.aspx/getTotalReturnIndexString",{
         method:"POST",
-        headers:{
-          "Content-Type":"application/json; charset=UTF-8",
-          "Accept":"application/json, text/javascript, */*; q=0.01",
-          "Accept-Language":"en-US,en;q=0.9",
-          "Origin":host.base,
-          "X-Requested-With":"XMLHttpRequest",
-          "Referer":host.referer,
-          "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
-        },
+        headers,
         body:JSON.stringify({cinfo}),
-        signal:AbortSignal.timeout(12000)
+        signal:AbortSignal.timeout(9000),
+        redirect:"follow"
       });
+      const contentType=response.headers.get("content-type")||"";
       const text=await response.text();
-      if(!response.ok)throw new Error("HTTP "+response.status);
+      if(!response.ok)throw new Error("HTTP "+response.status+" ("+contentType+")");
       let raw;
       try{raw=JSON.parse(text)}catch(e){
-        const hint=text.trim().slice(0,80).replace(/ +/g," ");
-        throw new Error("HTML / non-JSON response ("+hint+")");
+        const hint=text.trim().slice(0,110).replace(/\\s+/g," ");
+        const challenge=/cloudflare|akamai|access denied|captcha|bot detection|request blocked/i.test(hint+" "+text.slice(0,1600));
+        throw new Error(
+          (challenge?"upstream bot protection returned HTML":"upstream returned HTML / non-JSON")+
+          " (HTTP "+response.status+", "+(contentType||"unknown content type")+
+          ", session "+(session.status===null?"unavailable":session.status)+
+          (session.cookies?"; cookie received":"; no cookie received")+
+          ", body: "+hint+")"
+        );
       }
       const rows=parseRows(raw);
-      if(!rows.length)throw new Error("No TRI rows returned");
+      if(!rows.length)throw new Error("NSE returned no TRI rows for this index and date range");
       return rows;
     }catch(error){errors.push(host.base+": "+(error.message||"request failed"))}
   }
   throw new Error("All NSE host attempts failed for "+toIso(start)+" to "+toIso(end)+": "+errors.join("; "));
 }
+
 module.exports=async function handler(req,res){
-  res.setHeader("Cache-Control","public, s-maxage=21600, stale-while-revalidate=86400");
   res.setHeader("Access-Control-Allow-Origin","*");
   res.setHeader("Access-Control-Allow-Methods","GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers","Content-Type");
   if(req.method==="OPTIONS")return res.status(204).end();
   if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});
+
   const index=String(req.query.index||"").trim().toUpperCase();
   const start=String(req.query.start||"").trim();
   const end=String(req.query.end||"").trim();
   if(!ALLOWED.has(index))return res.status(400).json({error:"Unsupported benchmark. No proxy substitution is permitted."});
   if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(start)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(end)||start>end)
     return res.status(400).json({error:"Dates must use YYYY-MM-DD and start must not exceed end."});
+
   const startDate=fromIso(start),endDate=fromIso(end);
   if((endDate-startDate)/86400000>12000)return res.status(400).json({error:"Requested date span exceeds 12,000 days."});
+
   try{
     const chunks=[];
     let cursor=startDate;
@@ -101,16 +156,18 @@ module.exports=async function handler(req,res){
       chunks.push({start:new Date(cursor),end:chunkEnd});
       cursor=addDays(chunkEnd,1);
     }
-    // Small concurrency protects the upstream endpoint while avoiding long serial waits.
     const collected=[];
-    for(let i=0;i<chunks.length;i+=3){
-      const batch=chunks.slice(i,i+3);
+    // Limit concurrency to protect the publisher's endpoint.
+    for(let i=0;i<chunks.length;i+=2){
+      const batch=chunks.slice(i,i+2);
       const batchRows=await Promise.all(batch.map(c=>fetchChunk(index,c.start,c.end)));
       batchRows.forEach(rows=>collected.push(...rows));
     }
     const dedup=new Map(collected.map(x=>[x.date,x.value]));
     const data=[...dedup.entries()].map(([date,value])=>({date,value})).sort((a,b)=>a.date.localeCompare(b.date));
     if(data.length<30)return res.status(404).json({error:"Fewer than 30 usable TRI observations were returned for "+index+"."});
+
+    res.setHeader("Cache-Control","public, s-maxage=21600, stale-while-revalidate=86400");
     return res.status(200).json({
       source:"NSE Indices historical Total Returns Index",
       sourceUrl:"https://www.niftyindices.com/reports/historical-data",
@@ -123,6 +180,7 @@ module.exports=async function handler(req,res){
       data
     });
   }catch(error){
+    res.setHeader("Cache-Control","no-store, max-age=0");
     return res.status(502).json({
       error:"Automatic TRI retrieval failed: "+(error&&error.message?error.message:"upstream request failed"),
       sourceUrl:"https://www.niftyindices.com/reports/historical-data",
