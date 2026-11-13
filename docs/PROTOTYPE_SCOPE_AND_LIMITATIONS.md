@@ -35,7 +35,7 @@ Pairwise overlap is calculated as the sum of the lower scheme NAV weight for eac
 ## What is not an automatic live integration
 
 The prototype does not yet have:
-- A production-verified benchmark feed or confirmed commercial data-use agreement. The GitHub backend now targets Tipsheet's published weekly NSE TRI-derived datasets for supported Nifty indices. Its parser selects the tr Total Return series and excludes pr Price Return. The latest code is committed, but the Netlify production deployment has not yet been verified.
+- A confirmed commercial data-use agreement for the benchmark feed. The GitHub backend targets Tipsheet's published weekly NSE TRI-derived datasets for supported Nifty indices. Its parser selects the `tr` Total Return series and excludes `pr` Price Return. The Cloudflare Worker route is implemented in this repository; production endpoint availability must be checked against the current deployment before relying on benchmark-derived outputs.
 - Automatic YTM, duration, credit-quality and manager disclosures for every scheme. Holdings ingestion currently has PPFAS and HDFC adapters; other AMC formats are not guessed. AUM, Riskometer, IR, benchmark and TER are retrieved automatically when AMFI returns a sufficiently close scheme match.
 - Automatic effective-dated mapping from scheme code to the current Tier 1 benchmark.
 - User portfolios from Angel One accounts or demat / CAS statements.
@@ -88,7 +88,7 @@ That technical feasibility does not make a generic overlap module a FundLens opp
 
 ## Automatic inputs and user uploads
 
-The live UI has no upload controls. Scheme NAV is requested from MFapi.in. AMFI Fund Performance supplies benchmark mapping, AUM, Riskometer, official plan-specific IR and trailing fund / benchmark returns. AMFI monthly workbook supplies Direct / Regular full TER. The RBI current 10-year G-Sec proxy is automatically retrieved and displayed with source and date. PPFAS and HDFC scheme portfolio workbooks are automatically requested for supported schemes and processed using exact ISINs. A weekly Tipsheet series derived from NSE TRI is wired in GitHub for supported Nifty benchmarks, but the latest Netlify production deployment has not been verified; benchmark-dependent calculations remain unavailable until validated weekly data is loaded.
+The live UI has no upload controls. Scheme NAV is requested from MFapi.in. AMFI Fund Performance supplies benchmark mapping, AUM, Riskometer, official plan-specific IR and trailing fund / benchmark returns. AMFI monthly workbook supplies Direct / Regular full TER. The RBI current 10-year G-Sec proxy is automatically retrieved and displayed with source and date. PPFAS and HDFC scheme portfolio workbooks are automatically requested for supported schemes and processed using exact ISINs. A weekly Tipsheet series derived from NSE TRI is wired in GitHub for supported Nifty benchmarks. The Cloudflare Worker source routes this API, but its current production behavior must be confirmed with live endpoint checks after deployment.
 
 
 ## Automatic-source smoke tests
