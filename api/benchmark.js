@@ -93,8 +93,19 @@ function findManifestResource(manifest, datasetKey) {
   return [...new Set(found)][0] || null;
 }
 function safeTipsheetUrl(path) {
-  // Manifest file addresses are relative to /data/v1/manifest.json, not the domain root.
-  const url = new URL(path, MANIFEST_URL);
+  const raw = String(path || "").trim();
+  let url;
+  if (/^https?:\\/\\//i.test(raw)) {
+    url = new URL(raw);
+  } else {
+    // Tipsheet manifest file addresses are relative to /data/v1/, whether
+    // the manifest spells them as "indices/..." or "/indices/...".
+    const relativePath = raw.replace(/^\\/+/, "");
+    const dataPath = relativePath.startsWith("data/v1/")
+      ? "/" + relativePath
+      : "/data/v1/" + relativePath;
+    url = new URL(dataPath, DATA_BASE);
+  }
   if (url.protocol !== "https:" || !["tipsheet.markets", "www.tipsheet.markets"].includes(url.hostname.toLowerCase())) {
     throw new Error("The Tipsheet manifest returned a URL outside the approved Tipsheet domain.");
   }
