@@ -40,7 +40,7 @@ function isJsonPath(value) {
 function resourceFrom(value) {
   if (isJsonPath(value)) return value;
   if (!value || typeof value !== "object") return null;
-  const fields = ["url", "href", "file", "path", "src", "json", "uri", "download", "data_url", "file_url", "filename"];
+  const fields = ["url", "href", "file", "path", "src", "json", "uri", "download", "data_url", "file_url", "filename", "address", "current_file", "download_url", "file_path", "data_file"];
   for (const field of fields) {
     const candidate = value[field];
     if (isJsonPath(candidate)) return candidate;
