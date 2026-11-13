@@ -67,13 +67,154 @@
 @media(max-width:900px){.input-row{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.insight-grid{grid-template-columns:1fr}.two-col{grid-template-columns:1fr}}
 @media(max-width:650px){.topbar{gap:8px}.brand{font-size:16px}.mode-switch button{padding:6px 8px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.method-row{grid-template-columns:110px 1fr}.research-hero h2{font-size:18px}}
 
+
+/* FundLens product landing page */
+body:not(.studio-open) .app-shell{display:none}
+body.studio-open #landingPage{display:none}
+body.studio-open .app-shell{display:block}
+.landing-page{min-height:100vh;background:#f5f7f9;color:#15283b}
+.landing-nav{height:76px;padding:0 clamp(20px,5vw,76px);display:flex;align-items:center;justify-content:space-between;gap:24px;background:#101c2c;color:#fff}
+.landing-brand{display:flex;align-items:center;gap:11px;color:#fff;text-decoration:none;font-size:20px;font-weight:850;letter-spacing:-.6px}
+.landing-brand>span:last-child>span{color:#8be0b9}
+.landing-brand small{display:block;color:#a8b7c8;font-size:9px;letter-spacing:1.2px;font-weight:650}
+.landing-mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,#39bc8a,#08714f);display:grid;place-items:center;color:#fff;font-weight:900}
+.landing-links{display:flex;align-items:center;gap:25px}
+.landing-links a{color:#cbd5e1;text-decoration:none;font-size:12px;font-weight:700}
+.landing-links a:hover{color:#fff}
+.landing-content{max-width:1240px;margin:0 auto;padding:0 34px}
+.landing-hero{min-height:560px;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:56px;padding:65px 0 70px}
+.landing-eyebrow{font-size:10px;font-weight:850;letter-spacing:1.45px;color:#16835d}
+.landing-hero h1{font-size:clamp(38px,5.2vw,66px);line-height:1.03;letter-spacing:-2.6px;color:#14283b;margin:17px 0 19px}
+.landing-hero h1 span{color:#16835d}
+.landing-hero-copy>p{max-width:610px;color:#607186;font-size:16px;line-height:1.75;margin:0}
+.landing-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:28px}
+.landing-actions a{font-size:12px;font-weight:800;color:#4b6275;text-decoration:none}
+.landing-actions .btn,.landing-flow-section .btn{padding:12px 17px;font-size:12px}
+.landing-disclaimer{margin-top:24px;color:#8b98a7;font-size:10px}
+.landing-hero-visual{padding:16px;border-radius:24px;background:linear-gradient(145deg,#dfeee8,#dbe4ed);box-shadow:0 24px 65px #20374b1c}
+.hero-window{padding:22px 22px 18px;border:1px solid #e6edf0;border-radius:17px;background:#fff;box-shadow:0 12px 36px #18354a17}
+.hero-window-top{display:flex;align-items:center;gap:5px;color:#8a98a8;font-size:8px;font-weight:850;letter-spacing:1px}
+.hero-window-top span{margin-right:auto}
+.hero-window-top i{width:6px;height:6px;border-radius:50%;background:#d9e3e9}
+.hero-fund-name{font-size:17px;font-weight:850;letter-spacing:-.4px;color:#22374b;margin:24px 0 4px}
+.hero-chart-label{font-size:10px;color:#8a98a8}
+.hero-chart{height:135px;display:flex;align-items:flex-end;gap:8px;padding:14px 4px 0;border-bottom:1px solid #edf1f4;background:repeating-linear-gradient(to bottom,transparent 0,transparent 33px,#f0f3f5 34px)}
+.hero-chart span{flex:1;min-width:7px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#54bd91,#16835d);opacity:.86}
+.hero-mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:15px}
+.hero-mini-grid>div{padding:10px;border:1px solid #edf1f4;border-radius:9px;background:#fbfcfd}
+.hero-mini-grid small{display:block;color:#8a98a8;font-size:8px;font-weight:850;letter-spacing:.5px}
+.hero-mini-grid b{display:block;color:#344b5e;font-size:10px;margin-top:4px}
+.hero-window-note{font-size:9px;color:#9aa6b3;margin-top:13px}
+.landing-section{padding:58px 0;border-top:1px solid #e5eaef}
+.landing-section-heading{max-width:760px;margin-bottom:24px}
+.landing-section-heading h2,.landing-flow-section h2{font-size:clamp(27px,3.2vw,39px);line-height:1.13;letter-spacing:-1.3px;margin:9px 0 10px;color:#172d40}
+.landing-section-heading p{font-size:13px;line-height:1.7;color:#718094;margin:0;max-width:760px}
+.landing-card-grid{display:grid;gap:13px}
+.landing-card-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.landing-card-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.landing-card{padding:20px 18px;border:1px solid #e3e9ee;border-radius:14px;background:#fff;box-shadow:0 6px 22px #1d354509}
+.landing-card-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#e9f5ef;color:#11815a;font-size:18px}
+.landing-card h3{font-size:14px;color:#23394d;margin:15px 0 7px}
+.landing-card p{font-size:11px;line-height:1.65;color:#718094;margin:0}
+.landing-card>span{display:inline-block;margin-top:15px;padding-top:10px;border-top:1px solid #edf1f4;width:100%;color:#19805b;font-size:9px;font-weight:850;letter-spacing:.4px;text-transform:uppercase}
+.landing-public-note{margin-top:16px;padding:14px 16px;background:#eef3f6;border-radius:10px;color:#647589;font-size:10px;line-height:1.65}
+.landing-public-note b{color:#334b60}
+.landing-gap-section{background:#edf3f1;margin:0 calc((1240px - 100vw)/2);padding:58px max(34px,calc((100vw - 1172px)/2))}
+.landing-step{font-size:10px;color:#16835d;font-weight:900;letter-spacing:1px}
+.landing-hypothesis{margin-top:17px;font-size:11px;color:#65778a;line-height:1.6}
+.landing-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.landing-mode{padding:23px;border:1px solid #e3e9ee;border-radius:14px;background:#fff}
+.landing-mode.advanced{background:#152d3c;color:#fff;border-color:#152d3c}
+.mode-chip{font-size:9px;font-weight:900;letter-spacing:1px;color:#16835d}
+.landing-mode.advanced .mode-chip{color:#8be0b9}
+.landing-mode h3{font-size:18px;margin:12px 0 7px;color:#23394d}
+.landing-mode.advanced h3{color:#fff}
+.landing-mode p{font-size:11px;line-height:1.7;color:#718094;margin:0}
+.landing-mode.advanced p{color:#c1d0d7}
+.landing-flow-section{padding:65px 0 72px;text-align:center}
+.landing-flow-section h2{margin:10px auto 22px}
+.landing-flow{display:flex;align-items:center;justify-content:center;gap:13px;flex-wrap:wrap;margin:20px 0}
+.landing-flow span{padding:10px 14px;border:1px solid #dce6e2;border-radius:9px;background:#fff;color:#315647;font-size:11px;font-weight:850}
+.landing-flow i{font-style:normal;color:#8a9aab}
+.landing-flow-section>p{max-width:680px;margin:0 auto 22px;color:#718094;font-size:11px;line-height:1.7}
+.landing-footer{padding:19px 34px 24px;border-top:1px solid #e3e9ee;text-align:center;color:#929eaa;font-size:9px;line-height:1.7}
+#backToLanding{color:#cbd5e1;text-decoration:none;font-size:12px;font-weight:700}
+#backToLanding:hover{color:#fff}
+@media(max-width:900px){.landing-hero{grid-template-columns:1fr;gap:35px;padding:52px 0}.landing-hero-visual{max-width:620px}.landing-gap-section{margin:0 -34px;padding:52px 34px}.landing-card-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.landing-nav{height:auto;min-height:66px;padding:13px 15px;align-items:flex-start}.landing-links{gap:9px;flex-wrap:wrap;justify-content:flex-end}.landing-links a{display:none}.landing-links .btn{padding:8px 9px;font-size:10px}.landing-content{padding:0 17px}.landing-hero{min-height:0;padding:46px 0 52px}.landing-hero h1{letter-spacing:-1.5px}.landing-hero-copy>p{font-size:13px}.landing-actions{gap:14px}.landing-hero-visual{padding:9px;border-radius:16px}.hero-window{padding:15px}.hero-chart{height:110px;gap:5px}.hero-mini-grid{gap:5px}.hero-mini-grid>div{padding:7px}.landing-section{padding:42px 0}.landing-card-grid.three,.landing-card-grid.four,.landing-mode-grid{grid-template-columns:1fr}.landing-gap-section{margin:0 -17px;padding:42px 17px}.landing-flow-section{padding:48px 0}.landing-flow{gap:7px}.landing-flow i{display:none}.landing-flow span{padding:8px 9px}.landing-footer{padding:17px 16px 22px}.landing-brand{font-size:17px}.landing-brand small{font-size:8px}}
+
 </style>
 </head>
 <body>
+<section id="landingPage" class="landing-page">
+ <header class="landing-nav">
+  <a class="landing-brand" href="#landingPage" aria-label="FundLens home"><span class="landing-mark">F</span><span>Fund<span>Lens</span><small>MUTUAL FUND RESEARCH STUDIO</small></span></a>
+  <nav class="landing-links" aria-label="Landing page">
+   <a href="#angelone-current">Angel One today</a>
+   <a href="#fundlens-gap">The opportunity</a>
+   <a href="#fundlens-flow">How it works</a>
+   <button class="btn primary" id="enterStudio" type="button">Explore Research Studio <span aria-hidden="true">→</span></button>
+  </nav>
+ </header>
+ <main class="landing-content">
+  <section class="landing-hero">
+   <div class="landing-hero-copy">
+    <div class="landing-eyebrow">AN INDEPENDENT PRODUCT CONCEPT</div>
+    <h1>Beyond finding a fund.<br><span>Understand the fund.</span></h1>
+    <p>Angel One already makes mutual funds discoverable and investable. FundLens explores a clearer, methodology-first research layer for understanding consistency, risk and comparability before making an investment decision.</p>
+    <div class="landing-actions"><button class="btn primary" id="enterStudioHero" type="button">Explore Research Studio <span aria-hidden="true">→</span></button><a href="#fundlens-gap">See the product opportunity ↓</a></div>
+    <div class="landing-disclaimer">Research support, not a fund recommendation. No investment execution or account access.</div>
+   </div>
+   <div class="landing-hero-visual">
+    <div class="hero-window">
+     <div class="hero-window-top"><span>FUNDLENS / RESEARCH SNAPSHOT</span><i></i><i></i><i></i></div>
+     <div class="hero-fund-name">Consistency before conclusions</div>
+     <div class="hero-chart-label">Illustrative research dimensions</div>
+     <div class="hero-chart"><span style="height:37%"></span><span style="height:51%"></span><span style="height:45%"></span><span style="height:66%"></span><span style="height:57%"></span><span style="height:76%"></span><span style="height:63%"></span><span style="height:84%"></span><span style="height:72%"></span><span style="height:93%"></span><span style="height:78%"></span><span style="height:88%"></span></div>
+     <div class="hero-mini-grid"><div><small>ROLLING OUTCOMES</small><b>Entry-date aware</b></div><div><small>RISK CONTEXT</small><b>Method shown</b></div><div><small>COMPARABILITY</small><b>Matched inputs</b></div></div>
+     <div class="hero-window-note">A visual concept only. Live research values are calculated inside the studio.</div>
+    </div>
+   </div>
+  </section>
+  <section class="landing-section" id="angelone-current">
+   <div class="landing-section-heading"><div class="landing-eyebrow">START WITH THE REAL PRODUCT</div><h2>What Angel One already offers</h2><p>FundLens is not proposing another mutual-fund discovery or execution app. Angel One's public materials already describe a substantial investor journey.</p></div>
+   <div class="landing-card-grid three">
+    <article class="landing-card"><div class="landing-card-icon">⌕</div><h3>Discover funds</h3><p>Browse a broad mutual-fund universe, explore categories and fund lists, and access SIP or lump-sum investment journeys.</p><span>Discovery and access</span></article>
+    <article class="landing-card"><div class="landing-card-icon">▤</div><h3>Inspect a scheme</h3><p>Review NAV and return information, scheme details, ratings and benchmark context, published fund holdings and peer-comparison information.</p><span>Scheme-level information</span></article>
+    <article class="landing-card"><div class="landing-card-icon">◫</div><h3>Track investments</h3><p>Use the Angel One investment dashboard and supported external-fund tracking journeys to monitor mutual-fund investments.</p><span>Portfolio and investing journey</span></article>
+   </div>
+   <div class="landing-public-note"><b>Important product context:</b> Angel One's publicly listed Fund &amp; Stock Lab also describes a fund screener, Smart Score, overlap checker and portfolio-analysis tools. Their customer availability and current operating status have not been independently verified here. For that reason, FundLens does not claim that overlap analysis is absent from Angel One, and does not position it as the core differentiator.</div>
+  </section>
+  <section class="landing-section landing-gap-section" id="fundlens-gap">
+   <div class="landing-section-heading"><div class="landing-eyebrow">THE PRODUCT HYPOTHESIS</div><h2>Make the evidence easier to interpret</h2><p>The opportunity to test is not whether Angel One has fund data. It is whether investors can interpret performance behaviour and compare schemes on a consistent, transparent basis within one research flow.</p></div>
+   <div class="landing-card-grid four">
+    <article class="landing-card"><div class="landing-step">01</div><h3>Consistency, not one endpoint</h3><p>Rolling-return distributions show how outcomes changed across historical investment start dates, instead of relying on a single trailing-return window.</p></article>
+    <article class="landing-card"><div class="landing-step">02</div><h3>Risk with context</h3><p>Explain volatility, drawdown and risk-adjusted measures with the formula, observation period, risk-free assumption and limitations visible.</p></article>
+    <article class="landing-card"><div class="landing-step">03</div><h3>Comparable comparisons</h3><p>Check category sub-type, plan, option and benchmark before putting schemes side by side. A mismatch should stop a like-for-like comparison.</p></article>
+    <article class="landing-card"><div class="landing-step">04</div><h3>Honest data states</h3><p>Show source dates and assumptions. When a matched benchmark series or disclosure is unavailable, say so instead of substituting or estimating it.</p></article>
+   </div>
+   <div class="landing-hypothesis">This is a product hypothesis to validate with investors and Angel One product data, not a claim that every element is missing from Angel One's current experience.</div>
+  </section>
+  <section class="landing-section" id="fundlens-experience">
+   <div class="landing-section-heading"><div class="landing-eyebrow">ONE RESEARCH ENGINE, TWO LEVELS</div><h2>Approachable when you need it. Detailed when you want it.</h2></div>
+   <div class="landing-mode-grid">
+    <article class="landing-mode"><span class="mode-chip">GUIDED / BASIC</span><h3>Understand the takeaway</h3><p>Plain-language summaries of positive rolling windows, median historical outcomes and maximum drawdown, with caveats alongside the result.</p></article>
+    <article class="landing-mode advanced"><span class="mode-chip">ADVANCED</span><h3>Inspect the methodology</h3><p>Detailed metrics, formulas, matched-date benchmark calculations, source disclosures and explicit assumptions for analytical investors.</p></article>
+   </div>
+  </section>
+  <section class="landing-flow-section" id="fundlens-flow">
+   <div class="landing-eyebrow">THE RESEARCH JOURNEY</div><h2>Discover. Inspect. Interpret. Compare. Decide.</h2>
+   <div class="landing-flow"><span>Discover</span><i>→</i><span>Inspect</span><i>→</i><span>Interpret</span><i>→</i><span>Compare</span><i>→</i><span>Decide</span></div>
+   <p>FundLens supports the research before a decision. It does not select a “best fund”, issue personalised recommendations, predict returns, read an Angel One account or execute investments.</p>
+   <button class="btn primary" id="enterStudioBottom" type="button">Enter FundLens Research Studio <span aria-hidden="true">→</span></button>
+  </section>
+ </main>
+ <footer class="landing-footer">FundLens is an independent product-concept prototype, not an official Angel One product, service or endorsement. Angel One product descriptions are based on publicly available materials and may vary by app version, customer eligibility or availability. Mutual fund investments are subject to market risks. This prototype is not investment advice.</footer>
+</section>
 <div class="app-shell">
 <header class="topbar">
  <div class="brand"><div class="brand-mark">F</div><div>Fund<span>Lens</span><div class="top-sub">MUTUAL FUND RESEARCH STUDIO</div></div></div>
- <div class="top-right"><span class="live-pill">● NAV + DISCLOSURE RESEARCH</span><div class="mode-switch" role="group" aria-label="Research experience"><button type="button" class="active" data-view="guided">Guided / Basic</button><button type="button" data-view="advanced">Advanced</button></div><a href="https://github.com/avgphoenixguy/fundlens" target="_blank" rel="noopener">Method & sources ↗</a></div>
+ <div class="top-right"><span class="live-pill">● NAV + DISCLOSURE RESEARCH</span><div class="mode-switch" role="group" aria-label="Research experience"><button type="button" class="active" data-view="guided">Guided / Basic</button><button type="button" data-view="advanced">Advanced</button></div><a href="#" id="backToLanding">About FundLens</a><a href="https://github.com/avgphoenixguy/fundlens" target="_blank" rel="noopener">Method & sources ↗</a></div>
 </header>
 <div class="layout">
  <aside class="sidebar">
