@@ -2,35 +2,71 @@
 
 **Mutual Fund Research & Comparison Studio**
 
-FundLens offers a **Guided** research experience for investors who want plain-language interpretation and an **Advanced** workspace for investors who want to inspect metrics, assumptions and source lineage. It is a research aid, not a recommendation engine.
+Live prototype: <https://fundlens-studio.vercel.app/>
 
-<https://fundlens-studio.vercel.app/>
+FundLens is a research workspace for self-directed Indian mutual fund investors. It addresses a specific product opportunity: moving beyond a single trailing-return figure to understand consistency, risk-adjusted performance, benchmark-relative outcomes and portfolio duplication.
 
-FundLens is an interactive research prototype for self-directed Indian mutual fund investors. It focuses on understanding return behaviour, not producing a black-box fund recommendation.
+It is not a recommendation engine and does not provide investment advice.
 
-## Product areas
+## Product experience
 
-- **Fund universe:** searchable scheme directory with scheme-code-level selection and Direct / Regular / Growth quick filters.
-- **Overview:** NAV performance chart, trailing NAV-derived returns, and drawdown chart.
-- **Rolling-return lab:** custom holding windows from 1 to 120 calendar months, daily / weekly / monthly start-date sampling, rolling-return time series, outcome histogram, average, median, best/worst window, and percentage of positive windows.
-- **Risk profile:** annualised volatility, maximum drawdown, positive-day share, and daily-return distribution.
-- **Guided / Advanced modes:** guided rolling consistency and plain-language interpretation, plus an advanced risk-adjusted and benchmark-relative scorecard.
-- **Advanced ratios:** Sharpe and Sortino from NAV; Alpha, Beta, Information Ratio, tracking error, benchmark CAGR and excess CAGR only when a matched daily benchmark TRI CSV is imported.
-- **Benchmark-relative rolling analysis:** compares fund and benchmark CAGR over identical historical holding windows.
-- **Category-aware research:** distinct evaluation lenses for active equity, index / passive, debt and hybrid schemes.
-- **Scheme disclosures:** dated AMC AUM, cost, riskometer and reported metric snapshots for six curated schemes, kept separate from NAV-calculated results.
-- **Portfolio exposure import:** session-only CSV upload for holdings and sector-weight aggregation.
-- **Compare funds:** side-by-side NAV-derived return and risk comparisons for up to three schemes.
+### Guided / Basic
+A plain-language experience that explains:
+- What a rolling return measures and how outcomes vary by historical investment start date.
+- The share of historical rolling windows with positive returns.
+- Median rolling CAGR and maximum observed drawdown.
+- Why a benchmark-relative conclusion cannot be drawn without a matched benchmark TRI.
 
-## Data and methodology
+### Advanced
+A methodology-first workspace that exposes:
+- NAV-derived trailing returns, annualised volatility and maximum drawdown.
+- Sharpe and Sortino ratios using an explicit user-entered annual risk-free / target-rate assumption.
+- Alpha, Beta, Information Ratio, tracking error and benchmark-relative CAGR only when an appropriate benchmark TRI is imported and matched by date.
+- A configurable analysis period, benchmark selection and metric explanations.
+- Category-aware interpretation for active equity, index/passive, debt and hybrid schemes. Category detection is a research aid and should be verified against the scheme's latest SID / factsheet.
 
-Historical NAV data is requested from [MFapi.in](https://www.mfapi.in/docs/), which documents a searchable scheme directory and scheme-level NAV history endpoints based on AMFI NAV disclosures. See the [AMFI NAV portal](https://www.amfiindia.com/net-asset-value/nav-download) for the primary NAV download and history surface.
+## Research workspaces
 
-The prototype calculates trailing CAGR, volatility, drawdown and rolling returns from the selected plan/option's NAV observations. For rolling returns, the engine shifts each eligible start date forward by the custom number of calendar months, finds the first NAV observation on or after that date, then calculates either absolute holding-period return or annualised CAGR. Start dates are sampled daily, weekly (every five trading observations), or monthly (every 21 trading observations).
+- **Fund universe:** search scheme names / AMCs using the MFapi.in scheme directory and load scheme-level NAV history.
+- **Overview:** selected scheme metadata, NAV-based trailing returns, a normalised investment-value chart and historical drawdown.
+- **Rolling lab:** configurable 1–120 month holding windows, daily / weekly / monthly start-date sampling, absolute or annualised returns, rolling outcome chart and histogram.
+- **Compare funds:** compare up to three schemes with NAV-derived return / risk measures. The comparison is descriptive, not a universal ranking.
+- **Risk profile:** annualised volatility, maximum drawdown, positive-day share and daily-return distribution.
+- **Portfolio overlap:** import one combined holdings CSV covering multiple schemes. Set investor allocation amounts, inspect pairwise stock overlap, repeated positions, blended stock weights and sector concentration.
+- **Source and methodology disclosures:** explain formulas, date matching, data limitations and source requirements.
 
-**Benchmark caution:** benchmark-relative measures remain unavailable until a matched daily TRI file is uploaded. The app does not substitute a price index or invent benchmark data. AUM, TER and holdings are not returned by the NAV endpoint; the prototype therefore uses dated, separately sourced AMC snapshots for selected examples and offers a portfolio CSV import. See `docs/DATA_IMPORT_GUIDE.md`, `docs/ADVANCED_METRICS_METHODOLOGY.md` and `docs/CATEGORY_AWARE_RESEARCH.md`.
+## Data sources and integrations
 
-## Run locally
+### Scheme NAV
+Scheme search and NAV observations are requested from [MFapi.in](https://www.mfapi.in/docs/), a third-party API that republishes AMFI NAV disclosures. The API is not a total-return index and does not supply the complete holdings, AUM, TER or factsheet risk data. The newest date returned by that service may lag the current date.
+
+### Benchmark TRI
+Benchmark-relative metrics require a daily Total Returns Index (TRI) series for the **exact Tier 1 benchmark** declared in the current scheme SID / factsheet. The user selects the benchmark name and imports the official TRI CSV in Advanced view. The app joins NAV and TRI on exact dates only, does not forward-fill, does not substitute a price index and does not manufacture missing observations.
+
+For Nifty family indices, NSE Indices publishes downloadable historical Total Returns Index values through its [historical data reports](https://www.niftyindices.com/reports/historical-data). NSE explains why a TRI, which includes constituent dividends, is the appropriate comparison for total returns: [NSE Total Returns Index](https://www.nseindia.com/static/products-services/indices-total-returns-index).
+
+### Fund disclosures
+A small set of selected-scheme AUM, cost, riskometer, benchmark and AMC-reported ratio examples is included as dated reference data. These values are **not refreshed by the NAV API**. They are not comprehensive or synchronised to one common reporting date. BER is not relabelled as TER. The source register and caveats are in `docs/REAL_FUND_DATA_SOURCES.md`.
+
+### Holdings
+Portfolio overlap depends on the latest monthly holdings disclosure. SEBI's mutual fund disclosure framework requires scheme portfolios, including ISINs, to be made available in downloadable format. Users download the relevant AMC disclosures and combine the required rows into the provided FundLens template. The application does not currently scrape or centrally store every AMC's holdings file.
+
+## Key calculations
+
+- **CAGR:** NAV / TRI growth over actual elapsed calendar time.
+- **Volatility:** sample standard deviation of daily NAV returns multiplied by √252.
+- **Sharpe:** mean daily excess return over the user-entered risk-free assumption, divided by daily return standard deviation, multiplied by √252.
+- **Sortino:** mean daily excess return divided by downside deviation relative to the same target-rate assumption, multiplied by √252.
+- **Beta:** sample covariance of fund and benchmark daily returns divided by benchmark return variance.
+- **Alpha:** annualised daily CAPM intercept using matched fund / benchmark returns and the selected risk-free assumption.
+- **Tracking error:** sample standard deviation of daily active returns multiplied by √252.
+- **Information Ratio:** daily arithmetic active return divided by the sample standard deviation of daily active returns, using the Tier 1 benchmark. The implementation does not apply an extra √252 multiplier to this daily estimate, in line with the daily return formulation described by SEBI.
+- **Pairwise stock overlap:** sum, across securities present in both funds, of the lower of their two reported portfolio weights.
+- **Blended stock / sector exposure:** sum of each fund's investor-entered allocation multiplied by its disclosed holding / sector weight, divided by the total investor allocation.
+
+Full formulas, sample rules and limitations: `docs/ADVANCED_METRICS_METHODOLOGY.md`, `docs/ROLLING_RETURN_METHODOLOGY.md`, `docs/CATEGORY_AWARE_RESEARCH.md`, and `docs/PORTFOLIO_OVERLAP_METHODOLOGY.md`.
+
+## Running locally
 
 No package installation or build step is required.
 
@@ -40,16 +76,14 @@ python3 -m http.server 3000
 
 Open <http://localhost:3000>.
 
-## Deploy on Vercel
+## Important limitations
 
-This is a static HTML app. Import the repository into Vercel and use:
-- Framework preset: **Other**
-- Build command: blank
-- Output directory: `.`
-- Install command: blank
+- Benchmark TRI import is currently manual and session-only. No production-grade benchmark data licence / API is connected.
+- Scheme holdings import is manual and session-only. The quality and recency of overlap results depend on the AMC disclosure supplied by the user.
+- Dated scheme disclosures cover selected examples only. They are not comprehensive live AUM / TER / holdings integrations.
+- Category classification is heuristic and needs confirmation against the latest SID / factsheet.
+- NAV-based risk and return calculations depend on the availability and quality of NAV history. A NAV series alone cannot provide benchmark-relative metrics.
+- The app does not yet model derivatives look-through, transaction costs, investor cash flows, taxes, liquidity, credit migration, or complete risk across asset classes.
+- Overlapping rolling windows are not independent observations. A positive-window share is a historical sample statistic, not a forecast or probability of future profit.
 
-The connected GitHub repository deploys the root `index.html` on pushes to `main`.
-
-## Important
-
-This is a product prototype, not investment advice. Data access depends on the third-party NAV API's availability, terms and rate limits. Verify current scheme information with the AMC and primary regulatory disclosures before making investment decisions.
+FundLens is a product prototype for research and discussion, not investment advice. Verify current information with AMC, AMFI, SEBI and index-provider disclosures before making investment decisions.
