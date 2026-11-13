@@ -116,10 +116,13 @@ module.exports=async function handler(req,res){
     "3Y":num(plan==="direct"?match.ir3YrDirect:match.ir3YrRegular),
     "5Y":num(plan==="direct"?match.ir5YrDirect:match.ir5YrRegular),
     "10Y":num(plan==="direct"?match.ir10YrDirect:match.ir10YrRegular)
+   },
+   trailingReturns:{
+    "1Y":{fund:num(plan==="direct"?match.return1YearDirect:match.return1YearRegular),benchmark:num(match.return1YearBenchmark)},
+    "3Y":{fund:num(plan==="direct"?match.return3YearDirect:match.return3YearRegular),benchmark:num(match.return3YearBenchmark)},
+    "5Y":{fund:num(plan==="direct"?match.return5YearDirect:match.return5YearRegular),benchmark:num(match.return5YearBenchmark)},
+    "10Y":{fund:num(plan==="direct"?match.return10YearDirect:match.return10YearRegular),benchmark:num(match.return10YearBenchmark)}
    }
-,
-   availableFields:Object.keys(match),
-   additionalPublishedMetrics:Object.fromEntries(Object.entries(match).filter(([key,value])=>/alpha|beta|sharpe|sortino|standarddeviation|volatility|trackingerror|informationratio|ir\d/i.test(key)).map(([key,value])=>[key,value]))
   });
  }catch(error){
   return res.status(502).json({error:"Automatic AMFI Fund Performance retrieval failed: "+(error.message||"upstream error"),sourceUrl:"https://www.amfiindia.com/polling/amfi/fund-performance"});
