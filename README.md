@@ -111,11 +111,12 @@ The `wrangler.jsonc` build step copies `index.html` into the configured static-a
 
 The canonical public URL is [https://fundlens.krishnalahoti2004.workers.dev/](https://fundlens.krishnalahoti2004.workers.dev/). The repository includes:
 
-- `wrangler.jsonc`: builds `dist/index.html`, configures static assets and sends `/api/*` requests through the Worker first.
+- `wrangler.jsonc`: builds `dist/index.html` plus `dist/portfolio-fit/index.html`, configures static assets and sends `/api/*` requests through the Worker first.
+- `case-study/portfolio-fit/index.html`: standalone Angel One Portfolio Fit case-study prototype, served at `/portfolio-fit/`.
 - `cloudflare/worker.js`: routes the five data APIs to the existing handlers and serves static assets for the rest of the site.
 - `/api/health`: a lightweight deployment check that lists the registered API routes.
 
-For a manual deployment from the repository root, run `npx wrangler deploy`. When using Cloudflare Workers Builds, connect this repository on the `main` branch and use `npx wrangler deploy` as the deploy command. After a deployment, check `/api/health`, then test the data routes before relying on source-dependent outputs.
+For a manual deployment from the repository root, run `npx wrangler deploy`. When using Cloudflare Workers Builds, connect this repository on the `main` branch, set the Build command to `mkdir -p dist/portfolio-fit && cp index.html dist/index.html && cp case-study/portfolio-fit/index.html dist/portfolio-fit/index.html`, and set the Deploy command to `npx wrangler deploy`. Workers Builds does not use the `build.command` under Wrangler custom build settings, so enter the command in the Cloudflare dashboard under Settings > Build. After a deployment, check `/api/health`, then open `/portfolio-fit/` and test the data routes before relying on source-dependent outputs.
 
 ## Limitations
 
