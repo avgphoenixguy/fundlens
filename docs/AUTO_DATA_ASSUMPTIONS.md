@@ -56,7 +56,7 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - Matching: overlap is calculated only on exact ISINs. Fuzzy company-name matches are never used. Listed-equity rows are included; debt, cash, derivatives, non-equity and rows without a valid ISIN are excluded.
 - Pairwise formula: Overlap(A,B) = sum across ISINs of min(weight in A, weight in B), with each weight expressed as a percentage of scheme NAV.
 - Combined exposure: sum across schemes of (hypothetical allocation to scheme x disclosed holding weight). Allocations are user-controlled hypothetical weights across selected schemes and normalize to 100%. Equal allocation is the default. These are not actual account holdings.
-- Snapshot rule: analysis is suppressed if selected disclosure dates differ by more than 45 days. Files older than 60 days are marked stale. Data is a dated disclosure snapshot, not live intraday holdings.
+- Snapshot rule: analysis is suppressed if selected disclosure dates differ by more than 45 days. Files older than 45 days are marked stale. Data is a dated disclosure snapshot, not live intraday holdings.
 - Coverage rule: unsupported AMC, unrecognized scheme mapping, unavailable workbook, unsupported workbook layout, missing as-of date or failed validation returns unavailable/error. FundLens never fills missing holdings with estimates or another AMC's values.
 - PPFAS source page: https://amc.ppfas.com/downloads/portfolio-disclosure/index.php
 - HDFC source page: https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio
