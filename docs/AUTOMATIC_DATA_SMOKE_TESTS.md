@@ -2,7 +2,7 @@
 
 **Tested:** 13 November 2026  
 **Branch:** `feat/automatic-portfolio-holdings`  
-**Purpose:** Record live Vercel preview smoke tests for the automatic public holdings flow. Results are from the public preview API and dated AMC disclosures, not production account data.
+**Purpose:** Preserve the historical Vercel preview smoke-test record for the automatic public holdings flow. Results below are from a public preview API and dated AMC disclosures, not production account data. They do not certify the current Cloudflare deployment.
 
 ## Preview build
 
