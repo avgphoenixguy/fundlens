@@ -15,11 +15,11 @@ The product proposition is a category-aware, explainable research workspace with
 | Area | What is implemented | Data dependency |
 |---|---|---|
 | Guided / Basic | Plain-language rolling consistency, median outcome, positive-window share and drawdown interpretation | Scheme NAV history |
-| Advanced | Formula notes, selectable risk-free assumption, 1Y / 3Y / 5Y / 10Y / Max analysis periods | Scheme NAV; benchmark TRI for benchmark ratios |
+| Advanced | Formula notes, automatically retrieved RBI G-Sec risk-free proxy, 1Y / 3Y / 5Y / 10Y / Max analysis periods | Scheme NAV; benchmark TRI for benchmark ratios |
 | Fund discovery | Scheme search and scheme-code selection | MFapi.in scheme directory |
 | NAV history | Historical NAV download and NAV-derived trailing performance | MFapi.in API availability |
 | Rolling consistency | Configurable holding window, sampling frequency, distribution, best / worst / median / average and positive-window share | Scheme NAV history |
-| Benchmark-relative rolling | Same-date matched fund and TRI CAGR across holding windows | User-imported daily benchmark TRI |
+| Benchmark-relative rolling | Same-date matched fund and TRI CAGR across holding windows | Automatically retrieved NSE TRI for supported Nifty benchmarks; no substitute for unsupported CRISIL / unmapped indices |
 | Risk-adjusted scorecard | NAV Sharpe / Sortino, matched Alpha / Beta / Information Ratio / tracking error | Risk-free assumption; benchmark TRI required for benchmark metrics |
 | Category-aware lens | Distinct active equity, index / passive, debt and hybrid research priorities | Heuristic scheme classification plus user verification |
 | Dated scheme references | Selected-scheme AUM, costs, riskometer, benchmark and source snapshots | Curated dated sources, not updated by NAV API |
@@ -40,7 +40,7 @@ Supported Nifty TRI is retrieved automatically through a cached serverless route
 
 1. **Benchmark source / licensing:** official index data is published through index-provider channels, but a public prototype should not scrape, redistribute or republish it as a permanent data service without checking provider terms and obtaining appropriate access.
 2. **Scheme-to-benchmark mapping:** the authoritative benchmark is scheme-specific and can change. It must be checked against the current SID / factsheet, not guessed from the fund name.
-3. **Static app architecture:** the current product is a single-page static website. The benchmark TRI upload is session-only; there is no database, scheduled refresh, user authentication, file persistence or audited calculation service.
+3. **Static app architecture:** the current product is a single-page static website. The automatic benchmark and RBI routes are cached serverless integrations, but there is no database, user authentication, persisted user portfolio or audited calculation service.
 
 These gaps do not make the product concept impossible. They are reasons not to pretend those capabilities are already live. A production build would connect approved provider data, add normalisation and validation, version source snapshots, and display freshness / coverage per metric.
 
