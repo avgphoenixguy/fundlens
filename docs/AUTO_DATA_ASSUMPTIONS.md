@@ -40,13 +40,13 @@ FundLens has no user-facing upload controls. The application requests scheme and
 
 ## 5. Benchmark TRI
 
-- Scheme mapping: the current AMFI benchmark name is retrieved automatically when a sufficiently close scheme record is found.
+- Scheme mapping: the current AMFI benchmark name is retrieved automatically when a sufficiently close scheme record is found. The TRI connector then applies an exact allowlist for the six supported Nifty index families; broad prefix matches are not accepted. Reference-scheme fallbacks are separately labelled with their curated AMC source and date.
 - Published history source: Tipsheet's public indices/p dataset family, which Tipsheet documents as the weekly series used by its NSE index pages.
 - Underlying index source: NSE Indices Total Return Index data, with dividends reinvested. Tipsheet documents repairs of identified anomalous TRI prints against the corresponding price index. This is a source-level data correction; FundLens does not use the full price-return series as a substitute.
 - Dataset shape: Tipsheet's public data catalogue describes series JSON using ISO dates, a series map, resolution and metadata. The observed compact series keys include tr (Total Return), pr (Price Return), dd, vol, r3 and r5.
 - Selection rule: FundLens selects only tr, explicitly excludes pr and other non-return fields, and checks that observation spacing is weekly.
 - Output: rebased growth-of-100 observations, not raw NSE index levels. FundLens does not use Tipsheet's separate model indices.
-- Matching: scheme NAV and benchmark values are joined on exact dates only. There is no forward-fill, interpolation or price-index substitution.
+- Matching: scheme NAV and benchmark values are joined on exact dates only. There is no forward-fill, interpolation or price-index substitution. Weekly regression includes only consecutive matches 4–11 calendar days apart; date gaps outside this range are skipped before 52-period annualisation.
 - Hosting state (13 Nov 2026): Cloudflare Workers is the canonical deployment target. The repository now includes `wrangler.jsonc` and `cloudflare/worker.js` to route API requests to the existing handlers. After deployment, verify `/api/health`, then confirm the benchmark route returns validated weekly observations and sufficient exact-date matches before relying on benchmark-dependent calculations.
 - Official AMFI trailing benchmark returns and plan-specific IR are separate published disclosures. They do not supply the weekly observations used by FundLens regression metrics.
 
@@ -60,7 +60,7 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - Matching: overlap is calculated only on exact ISINs. Fuzzy company-name matches are never used. Listed-equity rows are included; debt, cash, derivatives, non-equity and rows without a valid ISIN are excluded.
 - Pairwise formula: Overlap(A,B) = sum across ISINs of min(weight in A, weight in B), with each weight expressed as a percentage of scheme NAV.
 - Combined exposure: sum across schemes of (hypothetical allocation to scheme x disclosed holding weight). Allocations are user-controlled hypothetical weights across selected schemes and normalize to 100%. Equal allocation is the default. These are not actual account holdings.
-- Snapshot rule: analysis is suppressed if selected disclosure dates differ by more than 45 days. Files older than 45 days are marked stale. Data is a dated disclosure snapshot, not live intraday holdings.
+- Snapshot rule: combined analysis is suppressed if any individual disclosure is older than 45 days, if a disclosure age is missing, or if selected disclosure dates differ by more than 45 days. Stale files are not used for pairwise or combined exposure calculations. Data is a dated disclosure snapshot, not live intraday holdings. Listed-equity rows without a sector field remain in an explicit 'Sector not disclosed' sector bucket.
 - Coverage rule: unsupported AMC, unrecognized scheme mapping, unavailable workbook, unsupported workbook layout, missing as-of date or failed validation returns unavailable/error. FundLens never fills missing holdings with estimates or another AMC's values.
 - PPFAS source page: https://amc.ppfas.com/downloads/portfolio-disclosure/index.php
 - HDFC source page: https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio
