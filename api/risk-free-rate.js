@@ -12,26 +12,50 @@ function decode(s) {
     .replace(/&#39;|&#x27;/gi,"'").replace(/&quot;/gi,'"').replace(/&lt;/gi,"<").replace(/&gt;/gi,">");
 }
 function parseRbi(html) {
-  const plain = decode(String(html || "")
-    .replace(/<script[\s\S]*?<\/script>/gi," ")
-    .replace(/<style[\s\S]*?<\/style>/gi," ")
-    .replace(/<[^>]+>/g," ")
-    .replace(/\s+/g," "));
+  const source = String(html || "");
+  // Parse the exact RBI table row for 6.94% GS 2036, not any unrelated long-dated security.
+  const trs = [...source.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map(m => m[1]);
+  const candidates = trs.filter(row => /6\.94\s*%?\s*GS\s*2036/i.test(row));
+  let rate = null;
+  if (candidates.length) {
+    const row = candidates[candidates.length - 1]
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\s+/g, " ").trim();
+    const nums = row.match(/\d+\.\d{2,4}/g) || [];
+    // The coupon is 6.94; the next numeric field is the RBI quoted yield.
+    if (nums.length >= 2) rate = Number(nums[1]);
+  }
+  const plain = source
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ");
   const marker = plain.search(/Government Securities Market/i);
   if (marker < 0) throw new Error("RBI Government Securities table not found");
-  const block = plain.slice(marker, marker + 1800);
-  const rows = [...block.matchAll(/(\d+(?:\.\d+)?%\s*GS\s*(20\d{2}))\s*[:|]?\s*(\d+\.\d{2,4})\s*%?/gi)];
-  if (!rows.length) throw new Error("No G-Sec yield rows found on RBI page");
-  const currentYear = new Date().getUTCFullYear();
-  const chosen = rows.map((m,index) => ({security:m[1].replace(/\s+/g," ").trim(), maturity:Number(m[2]), rate:Number(m[3]), index}))
-    // RBI's responsive / desktop page layouts can contain duplicate tables; prefer the last
-    // occurrence of the closest-maturity security because it is the final visible table snapshot.
-    .sort((a,b) => Math.abs(a.maturity-(currentYear+10))-Math.abs(b.maturity-(currentYear+10)) || b.index-a.index)[0];
-  if (!Number.isFinite(chosen.rate) || chosen.rate < 3 || chosen.rate > 15) throw new Error("Parsed RBI G-Sec yield failed sanity checks");
-  const dateMatch = block.match(/as on\s+([A-Za-z]+\s+\d{1,2},\s+\d{4})/i);
-  const asOf = dateMatch ? new Date(dateMatch[1]).toISOString().slice(0,10) : null;
-  if (!asOf) throw new Error("RBI G-Sec observation date not found");
-  return {security:chosen.security,maturity:chosen.maturity,rate:chosen.rate,asOf,source:"Reserve Bank of India Current Rates",sourceUrl:"https://www.rbi.org.in/",isFallback:false};
+  const block = plain.slice(marker, marker + 1400);
+  if (!Number.isFinite(rate)) {
+    const rowMatch = block.match(/6\.94\s*%?\s*GS\s*2036[\s|:]*([0-9]+\.[0-9]{2,4})/i);
+    if (rowMatch) rate = Number(rowMatch[1]);
+  }
+  if (!Number.isFinite(rate) || rate < 3 || rate > 15) {
+    throw new Error("The RBI 6.94% GS 2036 yield row could not be parsed safely");
+  }
+  const asOfMatch = block.match(/#\s*as on\s+([A-Za-z]+\s+\d{1,2},\s+\d{4})/i);
+  if (!asOfMatch) throw new Error("RBI Government Securities observation date not found");
+  const parsedDate = new Date(asOfMatch[1]);
+  if (Number.isNaN(parsedDate.getTime())) throw new Error("RBI observation date is invalid");
+  return {
+    security: "6.94% GS 2036",
+    maturity: 2036,
+    rate,
+    asOf: parsedDate.toISOString().slice(0,10),
+    source: "Reserve Bank of India Current Rates",
+    sourceUrl: "https://www.rbi.org.in/",
+    isFallback: false
+  };
 }
 module.exports = async function handler(req,res) {
   res.setHeader("Cache-Control","public, s-maxage=3600, stale-while-revalidate=21600");
