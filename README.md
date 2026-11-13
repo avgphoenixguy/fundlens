@@ -4,6 +4,10 @@
 
 **Live deployment (Cloudflare Workers):** [https://fundlens.krishnalahoti2004.workers.dev](https://fundlens.krishnalahoti2004.workers.dev)
 
+**Angel One Portfolio Fit case-study prototype:** [Open live prototype](https://fundlens.krishnalahoti2004.workers.dev/portfolio-fit/)
+
+The standalone concept is served from `case-study/portfolio-fit/index.html` at `/portfolio-fit/`. It is a demonstration of an optional portfolio-context layer inside Angel One Mutual Funds, uses synthetic holdings and values, and is not connected to Angel One accounts, orders, PAN or OTP.
+
 FundLens is a research workspace for self-directed Indian mutual fund investors. It explores a product opportunity: helping investors move beyond a single trailing-return figure to understand performance consistency, risk-adjusted outcomes, benchmark context and the assumptions behind each metric.
 
 It is not a recommendation engine and does not provide investment advice.
