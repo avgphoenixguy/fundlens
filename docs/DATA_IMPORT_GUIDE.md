@@ -1,4 +1,4 @@
-# FundLens automatic data and assumptions guide
+# FundLens automatic data integration guide (no user uploads)
 
 FundLens has no user-facing upload controls. The application requests scheme and disclosure inputs automatically from public sources wherever the source supports the requested field.
 
@@ -40,11 +40,15 @@ FundLens has no user-facing upload controls. The application requests scheme and
 
 ## 5. Benchmark TRI
 
-- Scheme mapping: current AMFI benchmark name is retrieved automatically when available.
-- Intended history source: NSE Indices Historical Data Reports, Total Returns Index Values.
-- Implementation: FundLens requests daily TRI through a cached Vercel /api/benchmark route for supported Nifty benchmark names.
-- Current limitation: NSE historical-data requests return HTML challenge responses from the Vercel serverless environment. Consequently, Alpha, Beta, FundLens-calculated IR, tracking error, benchmark CAGR and benchmark-relative rolling outcomes are suppressed when no matched daily TRI is received.
-- No price-index substitution is used. AMFI-reported trailing benchmark performance and official IR remain available from the AMFI Fund Performance API even when daily TRI history is not.
+- Scheme mapping: current AMFI benchmark name is retrieved automatically when a sufficiently close scheme record is found.
+- Published history source: Tipsheet's public indices/p dataset family, which Tipsheet documents as the weekly series used by its NSE index pages.
+- Underlying source: NSE Indices Total Return Index data, with dividends reinvested. Tipsheet documents repairs of identified anomalous TRI prints against the corresponding price index. FundLens does not use the full price-return series as a substitute.
+- Dataset shape: ISO dates, a series map, resolution and metadata. The observed compact keys include tr (Total Return), pr (Price Return), dd, vol, r3 and r5.
+- Selection rule: FundLens selects only tr, excludes pr and other non-return fields, and validates weekly spacing.
+- Output: rebased growth-of-100 observations, not raw NSE index levels. Tipsheet model indices are not used.
+- Matching: exact-date matching only; no forward-fill, interpolation or price-index substitution.
+- Verification: parser and path fixes are committed in GitHub but have not yet been verified in the paused Netlify production deployment. Until a deployed endpoint returns validated weekly observations, benchmark-dependent FundLens calculations remain unavailable.
+- Official AMFI trailing benchmark returns and plan-specific IR remain separate source disclosures.
 
 ## 6. Metric availability
 
@@ -58,9 +62,9 @@ FundLens has no user-facing upload controls. The application requests scheme and
 | AMFI trailing fund / benchmark returns | AMFI Fund Performance API | Automatic when report value is available |
 | AUM / Riskometer / benchmark name | AMFI Fund Performance API | Automatic when scheme match is available |
 | Direct / Regular TER | AMFI monthly TER workbook | Automatic when scheme match is available |
-| Alpha / Beta | NAV + matched daily benchmark TRI + RBI proxy for Alpha | Not available while NSE TRI requests are blocked |
-| Calculated IR / tracking error | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
-| Benchmark-relative rolling outcomes | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
+| Alpha / Beta | NAV + exact-date-matched weekly TRI-derived benchmark + weekly RBI proxy for Alpha | Code committed; live deployment verification pending |
+| Calculated IR / tracking error | NAV + matched weekly TRI-derived benchmark | Code committed; live deployment verification pending |
+| Benchmark-relative rolling outcomes | NAV + matched weekly TRI-derived benchmark | Code committed; live deployment verification pending |
 | YTM / modified duration / credit quality / holdings | AMC / scheme portfolio disclosures | Not automatically integrated yet |
 
 ## Sources
@@ -69,6 +73,9 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - AMFI Fund Performance page: https://www.amfiindia.com/polling/amfi/fund-performance
 - AMFI monthly TER workbook endpoint: https://www.amfiindia.com/api/populate-te-rdata-revised
 - AMFI Total TER disclosure page: https://www.amfiindia.com/ter
+- Tipsheet public data catalogue: https://tipsheet.markets/data/
+- Tipsheet index-page method: https://tipsheet.markets/methods/index_pages/
+- Tipsheet TRI repair method: https://tipsheet.markets/methods/indices/
 - NSE Indices historical data reports: https://www.niftyindices.com/reports/historical-data
 - RBI Current Rates: https://www.rbi.org.in/?id=10395
 - SEBI Information Ratio circular, 17 January 2025: https://www.sebi.gov.in/legal/circulars/jan-2025/disclosure-of-risk-adjusted-return-information-ratio-ir-for-mutual-fund-schemes-_90928.html
