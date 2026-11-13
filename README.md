@@ -21,7 +21,7 @@ A plain-language experience that explains:
 A methodology-first workspace that exposes:
 - NAV-derived trailing returns, annualised volatility and maximum drawdown.
 - Sharpe and Sortino ratios using an explicit user-entered annual risk-free / target-rate assumption.
-- Alpha, Beta, Information Ratio, tracking error and benchmark-relative CAGR only when an appropriate benchmark TRI is imported and matched by date.
+- Alpha, Beta, Information Ratio, tracking error and benchmark-relative CAGR when an appropriate mapped benchmark TRI is retrieved automatically and matched by date.
 - A configurable analysis period, benchmark selection and metric explanations.
 - Category-aware interpretation for active equity, index/passive, debt and hybrid schemes. Category detection is a research aid and should be verified against the scheme's latest SID / factsheet.
 
@@ -40,7 +40,7 @@ A methodology-first workspace that exposes:
 Scheme search and NAV observations are requested from [MFapi.in](https://www.mfapi.in/docs/), a third-party API that republishes AMFI NAV disclosures. The API is not a total-return index and does not supply the complete holdings, AUM, TER or factsheet risk data. The newest date returned by that service may lag the current date.
 
 ### Benchmark TRI
-Benchmark-relative metrics require a daily Total Returns Index (TRI) series for the **exact Tier 1 benchmark** declared in the current scheme SID / factsheet. The user selects the benchmark name and imports the official TRI CSV in Advanced view. The app joins NAV and TRI on exact dates only, does not forward-fill, does not substitute a price index and does not manufacture missing observations.
+Benchmark-relative metrics require a daily Total Returns Index (TRI) series for the **exact Tier 1 benchmark** declared in the current scheme SID / factsheet. For supported Nifty indices, FundLens automatically requests historical TRI observations from NSE Indices. No user upload is required. The app joins NAV and TRI on exact dates only, does not forward-fill, does not substitute a price index and does not manufacture missing observations.
 
 For Nifty family indices, NSE Indices publishes downloadable historical Total Returns Index values through its [historical data reports](https://www.niftyindices.com/reports/historical-data). NSE explains why a TRI, which includes constituent dividends, is the appropriate comparison for total returns: [NSE Total Returns Index](https://www.nseindia.com/static/products-services/indices-total-returns-index).
 
@@ -57,8 +57,9 @@ A small set of selected-scheme AUM, cost, riskometer, benchmark and AMC-reported
 - **Alpha:** annualised daily CAPM intercept using matched fund / benchmark returns and the selected risk-free assumption.
 - **Tracking error:** sample standard deviation of daily active returns multiplied by √252.
 - **Information Ratio:** daily arithmetic active return divided by the sample standard deviation of daily active returns, using the Tier 1 benchmark. FundLens displays an annualised research estimate using √252; it is not a substitute for the official AMC / AMFI disclosed IR.
+- **Risk-free assumption:** latest available RBI Current Rates yield for a long-dated Government of India security near 10 years to maturity. The current observation is held constant across the selected historical return window; it is an explicit proxy, not a daily historical risk-free curve.
 
-Full formulas, sample rules and limitations: `docs/ADVANCED_METRICS_METHODOLOGY.md`, `docs/ROLLING_RETURN_METHODOLOGY.md`, `docs/CATEGORY_AWARE_RESEARCH.md` and `docs/PROTOTYPE_SCOPE_AND_LIMITATIONS.md`.
+Full formulas, sample rules and limitations are documented in Advanced Metrics Methodology, Rolling Return Methodology, Category-aware Research, Automatic Data Assumptions and Prototype Scope & Limitations.
 
 ## Running locally
 
@@ -72,7 +73,7 @@ Open <http://localhost:3000>.
 
 ## Important limitations
 
-- Benchmark TRI import is currently manual and session-only. No production-grade benchmark data licence / API is connected.
+- Benchmark TRI is retrieved automatically for supported Nifty indices through a cached Vercel API route. The NSE endpoint is not a documented commercial API and can change; unsupported benchmark families remain unavailable. No user upload is required.
 - Dated scheme disclosures cover selected examples only. They are not comprehensive live AUM / TER / holdings integrations.
 - Category classification is heuristic and needs confirmation against the latest SID / factsheet.
 - NAV-based risk and return calculations depend on the availability and quality of NAV history. A NAV series alone cannot provide benchmark-relative metrics.
@@ -84,3 +85,8 @@ FundLens is a product prototype for research and discussion, not investment advi
 ## Product-scope decision: portfolio overlap
 
 FundLens does not currently ship a portfolio-overlap module. Angel One already has an Angel One-hosted NXT Fund & Stock Lab page that lists an Overlap Checker, pairwise overlap matrix, common holdings, stock-to-scheme holdings search and holdings-based visualisations. The page is separate from the documented primary Mutual Funds journey, and its indexed state says the MF data snapshot needs an upstream refresh. We therefore do not pitch stock overlap as a novel FundLens feature. See `docs/COMPETITIVE_RESEARCH_PORTFOLIO_OVERLAP.md` for the distinction between the mainstream app documentation and the NXT research surface.
+
+
+## Automatic data assumptions
+
+FundLens no longer asks users to upload benchmark files. Supported Nifty benchmark TRI history is requested through the /api/benchmark route. The RBI 10-year G-Sec proxy is fetched through /api/risk-free-rate. See the Automatic Data Assumptions document for sources, observation dates, caching, category limitations and fallback behaviour.
