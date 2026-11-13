@@ -344,9 +344,13 @@ async function resolvePortfolio(scheme, debug = false) {
   } else if (source === AMC_SOURCES.hdfc) {
     chosen = findHdfcDownload(links, scheme.name);
   }
-  if (debug && source === AMC_SOURCES.hdfc) return { debug: true, schemeName: scheme.name, fundHouse: scheme.fundHouse, linkCount: links.length, selected: chosen };
   if (!chosen) throw Object.assign(new Error("No matching public monthly portfolio workbook was found for this scheme on the AMC disclosure page."), { status: 404, sourceUrl: source.page });
   const fileUrl = chosen.url;
+  if (debug && source === AMC_SOURCES.hdfc) {
+    const debugBytes = await fetchBinary(fileUrl, source.page);
+    const debugRows = parseXlsxRows(debugBytes);
+    return { debug: true, schemeName: scheme.name, fundHouse: scheme.fundHouse, linkCount: links.length, selected: chosen, fileBytes: debugBytes.length, previewRows: debugRows.slice(0, 35).map(row => row.map(cell => cell ? cell.value : "").slice(0, 15)) };
+  }
   const fileHost = new URL(fileUrl).hostname.toLowerCase();
   if (!source.allowedHosts.includes(fileHost)) throw new Error("The discovered workbook host is not in the AMC allowlist");
   const buf = await fetchBinary(fileUrl, source.page);
