@@ -49,7 +49,8 @@ FundLens has no user-facing upload controls. The application requests scheme and
 ## 6. Automatic AMC portfolio holdings
 
 - Search: scheme name and scheme code are discovered from the MFAPI directory. No uploads or account credentials are requested.
-- First verified adapter: PPFAS Mutual Fund's public Portfolio Disclosure page, which lists separate month-end XLSX workbooks by scheme identifier. This is a deliberately narrow adapter, not universal AMC support.
+- Verified adapters: (1) PPFAS Mutual Fund's public Portfolio Disclosure page, with separate month-end XLSX workbooks by scheme identifier; (2) HDFC Mutual Fund's Monthly Portfolio page, which lists monthly scheme XLSX workbooks hosted on files.hdfcfund.com. This is not universal AMC support.
+- Source-specific weight conventions: PPFAS workbook percentages are stored as Excel fractions (e.g. 0.0749 = 7.49%); HDFC workbook values are stored as percentage points (e.g. 0.89 = 0.89%). The parser does not apply one blanket conversion across AMCs.
 - Trigger: when a Direct Growth scheme is added to Holdings Overlap, the backend retrieves the AMC disclosure page and selects the matching scheme workbook.
 - Validation: HTTPS host allowlist, XLSX ZIP structure, valid worksheet, explicit instrument-name / ISIN / portfolio-weight columns, valid ISIN pattern, numeric weights, and as-of date parsed from the file name / link. Duplicate ISIN rows are aggregated. The total parsed listed-equity weight must not exceed 105% of scheme NAV or the workbook is rejected.
 - Matching: overlap is calculated only on exact ISINs. Fuzzy company-name matches are never used. Listed-equity rows are included; debt, cash, derivatives, non-equity and rows without a valid ISIN are excluded.
@@ -57,7 +58,8 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - Combined exposure: sum across schemes of (hypothetical allocation to scheme x disclosed holding weight). Allocations are user-controlled hypothetical weights across selected schemes and normalize to 100%. Equal allocation is the default. These are not actual account holdings.
 - Snapshot rule: analysis is suppressed if selected disclosure dates differ by more than 45 days. Files older than 60 days are marked stale. Data is a dated disclosure snapshot, not live intraday holdings.
 - Coverage rule: unsupported AMC, unrecognized scheme mapping, unavailable workbook, unsupported workbook layout, missing as-of date or failed validation returns unavailable/error. FundLens never fills missing holdings with estimates or another AMC's values.
-- Source page: https://amc.ppfas.com/downloads/portfolio-disclosure/index.php
+- PPFAS source page: https://amc.ppfas.com/downloads/portfolio-disclosure/index.php
+- HDFC source page: https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio
 
 ## 7. Metric availability
 
@@ -74,7 +76,7 @@ FundLens has no user-facing upload controls. The application requests scheme and
 | Alpha / Beta | NAV + matched daily benchmark TRI + RBI proxy for Alpha | Not available while NSE TRI requests are blocked |
 | Calculated IR / tracking error | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
 | Benchmark-relative rolling outcomes | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
-| Listed-equity holdings / stock overlap | PPFAS public scheme workbook + exact ISIN matching | Automatic for supported PPFAS workbooks; other AMCs unavailable |
+| Listed-equity holdings / stock overlap | PPFAS and HDFC public scheme workbooks + exact ISIN matching | Automatic for validated PPFAS / HDFC workbooks; other AMCs unavailable |
 | YTM / modified duration / credit quality | AMC / scheme portfolio disclosures | Not automatically integrated; not inferred from NAV or equity holdings |
 
 ## Sources
@@ -86,5 +88,6 @@ FundLens has no user-facing upload controls. The application requests scheme and
 - NSE Indices historical data reports: https://www.niftyindices.com/reports/historical-data
 - RBI Current Rates: https://www.rbi.org.in/?id=10395
 - PPFAS monthly Portfolio Disclosure: https://amc.ppfas.com/downloads/portfolio-disclosure/index.php
+- HDFC monthly portfolio disclosure: https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio
 - SEBI Master Circular for Mutual Funds (20 March 2026), portfolio disclosure clause 6.1.1: https://www.sebi.gov.in/sebi_data/attachdocs/mar-2026/1774024028162.pdf
 - SEBI Information Ratio circular, 17 January 2025: https://www.sebi.gov.in/legal/circulars/jan-2025/disclosure-of-risk-adjusted-return-information-ratio-ir-for-mutual-fund-schemes-_90928.html
