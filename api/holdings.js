@@ -21,6 +21,12 @@ const AMC_SOURCES = {
       return null;
     }
   },
+  hdfc: {
+    label: "HDFC Mutual Fund",
+    page: "https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio",
+    match: /hdfc/i,
+    allowedHosts: ["www.hdfcfund.com", "files.hdfcfund.com"]
+  },
 };
 
 const MONTHS = {
@@ -126,8 +132,10 @@ function findPpfasDownload(items, alias) {
   return candidates[0] || null;
 }
 function findHdfcDownload(items, schemeName) {
-  const scored = items.map(x => ({ ...x, score: tokenScore(schemeName, x.label + " " + x.url) }))
-    .filter(x => x.score >= 0.72)
+  const scored = items.map(x => {
+    const label = String(x.label || "").replace(/\\b(?:monthly|fortnightly)\\b/gi, " ").replace(/\\b\\d{1,2}\\s+[A-Za-z]+\\s+20\\d{2}\\b/g, " ").replace(/\\.(?:xlsx|xlsm|xls|csv)\\b/gi, " ");
+    return { ...x, score: tokenScore(schemeName, label) };
+  }).filter(x => x.score >= 0.8)
     .sort((a, b) => (b.asOf || "").localeCompare(a.asOf || "") || b.score - a.score);
   return scored[0] || null;
 }
@@ -316,12 +324,22 @@ async function getSchemeMeta(code) {
   if (!name || !fundHouse) throw new Error("Scheme metadata did not identify a scheme and AMC");
   return { name, fundHouse, category: String(meta.scheme_category || "") };
 }
-async function resolvePortfolio(scheme) {
+async function resolvePortfolio(scheme, debug = false) {
   const source = Object.values(AMC_SOURCES).find(x => x.match.test(scheme.fundHouse));
   if (!source) throw Object.assign(new Error("Automatic public holdings retrieval is not yet supported for " + scheme.fundHouse + ". No substitute or estimated holdings were used."), { status: 422, fundHouse: scheme.fundHouse });
   const html = await fetchText(source.page, source.page);
   const links = collectDownloads(html, source.page, source.allowedHosts);
   let chosen = null;
+  if (debug && source === AMC_SOURCES.hdfc) {
+    return {
+      debug: true,
+      schemeName: scheme.name,
+      fundHouse: scheme.fundHouse,
+      sourcePage: source.page,
+      linkCount: links.length,
+      workbookLinks: links.filter(x => /hdfc/i.test(x.label + " " + x.url)).slice(0, 120)
+    };
+  }
   if (source === AMC_SOURCES.ppfas) {
     const alias = source.alias(scheme.name);
     if (!alias) throw Object.assign(new Error("This PPFAS scheme does not have a verified holdings-file mapping."), { status: 422 });
@@ -366,7 +384,7 @@ module.exports = async function handler(req, res) {
   if (!Number.isSafeInteger(code) || code <= 0) return res.status(400).json({ error: "A valid MFAPI schemeCode is required." });
   try {
     const scheme = await getSchemeMeta(code);
-    const result = await resolvePortfolio({ ...scheme, schemeCode: code });
+    const result = await resolvePortfolio({ ...scheme, schemeCode: code }, req.query.debug === "1");
     return res.status(200).json(result);
   } catch (error) {
     const status = Number(error.status) || 502;
