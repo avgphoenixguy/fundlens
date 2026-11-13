@@ -28,9 +28,9 @@ function parseRows(raw) {
   return rows.map(row => {
     const rawDate=String(row.Date||row.date||row.HistoricalDate||"").trim();
     let date=null;
-    if (/^\\d{4}-\\d{2}-\\d{2}/.test(rawDate)) date=rawDate.slice(0,10);
+    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(rawDate)) date=rawDate.slice(0,10);
     else {
-      const p=rawDate.split(/\\s+/);
+      const p=rawDate.split(/ +/);
       if(p.length===3) {
         const month=MONTHS.indexOf(p[1])+1;
         if(month>0)date=p[2]+"-"+String(month).padStart(2,"0")+"-"+p[0].padStart(2,"0");
@@ -61,7 +61,7 @@ async function fetchChunk(index,start,end) {
   if(!response.ok)throw new Error("NSE returned HTTP "+response.status);
   let raw;
   try{raw=JSON.parse(text)}catch(e){
-    const hint=text.trim().slice(0,100).replace(/\\s+/g," ");
+    const hint=text.trim().slice(0,100).replace(/ +/g," ");
     throw new Error("NSE returned HTML or an unrecognised response for "+toIso(start)+" to "+toIso(end)+" ("+hint+")");
   }
   return parseRows(raw);
@@ -77,7 +77,7 @@ module.exports=async function handler(req,res){
   const start=String(req.query.start||"").trim();
   const end=String(req.query.end||"").trim();
   if(!ALLOWED.has(index))return res.status(400).json({error:"Unsupported benchmark. No proxy substitution is permitted."});
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(start)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(end)||start>end)
+  if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(start)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(end)||start>end)
     return res.status(400).json({error:"Dates must use YYYY-MM-DD and start must not exceed end."});
   const startDate=fromIso(start),endDate=fromIso(end);
   if((endDate-startDate)/86400000>12000)return res.status(400).json({error:"Requested date span exceeds 12,000 days."});
