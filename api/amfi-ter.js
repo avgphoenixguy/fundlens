@@ -114,8 +114,9 @@ function findRecord(rows,schemeName){
  for(const row of rows.slice(1)){
   const name=String(row[nameCol]||"").trim();
   if(!name)continue;
-  const direct=Number(String(row[directCol]??"").replace(/,/g,""));
-  const regular=Number(String(row[regularCol]??"").replace(/,/g,""));
+  const directRaw=String(row[directCol]??"").trim(),regularRaw=String(row[regularCol]??"").trim();
+  const direct=directRaw===""?NaN:Number(directRaw.replace(/,/g,""));
+  const regular=regularRaw===""?NaN:Number(regularRaw.replace(/,/g,""));
   const date=parseDate(row[dateCol]);
   if(!date)continue;
   records.push({name,date,nsdlSchemeCode:codeCol>=0?String(row[codeCol]||""):null,directTer:Number.isFinite(direct)?direct:null,regularTer:Number.isFinite(regular)?regular:null});
