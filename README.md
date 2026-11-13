@@ -2,7 +2,7 @@
 
 **Mutual Fund Research & Comparison Studio**
 
-Prototype URL: [https://fundlens-studio.netlify.app/](https://fundlens-studio.netlify.app/)
+**Live deployment (Cloudflare Workers):** [https://fundlens.krishnalahoti2004.workers.dev](https://fundlens.krishnalahoti2004.workers.dev)
 
 FundLens is a research workspace for self-directed Indian mutual fund investors. It explores a product opportunity: helping investors move beyond a single trailing-return figure to understand performance consistency, risk-adjusted outcomes, benchmark context and the assumptions behind each metric.
 
@@ -69,7 +69,7 @@ The scheme's declared benchmark is retrieved from AMFI. For supported Nifty benc
 
 The connector selects the compact tr (Total Return) series and excludes pr (Price Return), drawdown, volatility and other non-benchmark series. It validates the weekly observation cadence before returning data. The published method describes how identified anomalous TRI prints are repaired against the corresponding price index; this is a documented source correction, not a substitution of the full price-return series. FundLens does not use Tipsheet's separate model indices.
 
-The latest weekly connector and parser are committed in GitHub, but the latest Netlify production deployment has not yet been verified. Until the public endpoint returns a validated weekly series and exact-date NAV matches are available, benchmark-dependent FundLens calculations remain unavailable. AMFI-published trailing benchmark returns and official plan-specific IR are separate source disclosures and can still be shown when AMFI supplies them.
+The weekly TRI connector is served through the Cloudflare Worker route `/api/benchmark`. FundLens computes benchmark-dependent Alpha, Beta, calculated Information Ratio, tracking error and relative rolling outcomes only when that route returns a validated weekly TRI-derived series and sufficient exact-date NAV matches. If retrieval, validation or date matching fails, those metrics remain explicitly unavailable. AMFI-published trailing benchmark returns and official plan-specific IR are separate source disclosures and can still be shown when AMFI supplies them.
 
 ## Metric calculations
 
@@ -89,22 +89,26 @@ Full formulas, source lineage and limitations are in [Advanced Metrics Methodolo
 
 ## No user uploads
 
-The current UI has no data upload controls. NAV, AMFI scheme disclosures, AMFI TER, supported AMC portfolio files and RBI yield are retrieved automatically. Holdings retrieval currently supports PPFAS and HDFC; other AMCs are not assumed to share the same workbook format. Weekly benchmark TRI-derived data is requested automatically from Tipsheet for supported Nifty indices. The connector is committed in GitHub but remains unverified in the paused Netlify production deployment; missing benchmark data is reported rather than replaced with an unsuitable index.
+The current UI has no data upload controls. NAV, AMFI scheme disclosures, AMFI TER, supported AMC portfolio files and RBI yield are retrieved automatically. Holdings retrieval currently supports PPFAS and HDFC; other AMCs are not assumed to share the same workbook format. Weekly benchmark TRI-derived data is requested automatically from Tipsheet for supported Nifty indices. The Cloudflare Worker entry point routes `/api/*` to the same source handlers; missing or invalid benchmark data is reported rather than replaced with an unsuitable index.
 
 ## Run locally
 
-No front-end package installation or build step is required.
+No front-end package installation is required. To run the full app locally with its API routes and static assets, use:
 
-    python3 -m http.server 3000
+    npx wrangler dev
 
-For local API routes, install the Netlify CLI and run netlify dev from the repository root so the /api/* redirects and serverless functions are available. A plain static server only serves the front end.
+To publish the current `main` source to Cloudflare Workers, use:
+
+    npx wrangler deploy
+
+The `wrangler.jsonc` build step copies `index.html` into the configured static-assets directory. The Worker routes `/api/*` requests to the existing API handlers and serves other requests from the static-assets binding. A plain static server only serves the front end, not the data APIs.
 
 ## Limitations
 
 - AMFI name matching is automated and may fail for renamed, legacy or unusual scheme names. A match must pass a similarity threshold.
 - Scheme category classification for AMFI queries uses MFAPI scheme metadata and scheme-name heuristics. Confirm the category and benchmark against the current SID / factsheet.
 - The RBI 10-year G-Sec yield is a current sovereign proxy held constant across the historical return sample. For debt funds, a duration-matched short-term sovereign reference could be more appropriate.
-- The weekly Tipsheet connector is a prototype integration over published NSE TRI-derived data. The latest parser changes are committed but not yet production-verified. Confirm source permissions and any index-data licensing requirements before commercial use; public fetchability does not itself establish production redistribution rights.
+- The weekly Tipsheet connector is an integration over published NSE TRI-derived data. Benchmark calculations remain conditional on a valid upstream response and exact-date matching. Confirm source permissions and any index-data licensing requirements before commercial use; public fetchability does not itself establish production redistribution rights.
 - AMFI TER workbook formats and API endpoints may change. The app displays the TER date and does not infer missing TER values.
 - Curated AMC references are dated fallbacks only. They are not represented as live if the AMFI source is unavailable.
 - Automatic holdings ingestion currently has PPFAS and HDFC adapters. Other AMCs return unavailable until their public workbook URL, instrument layout and weight convention are independently verified. Portfolio disclosures are periodic, not live, and may be stale.
