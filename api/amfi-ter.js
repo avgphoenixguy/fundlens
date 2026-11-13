@@ -1,6 +1,6 @@
 // Fetch AMFI's public monthly TER workbook and return the selected scheme's plan TER.
 // XLSX is parsed in-memory using Node's built-in zlib; no user upload or extra dependency.
-const zlib=require("zlib");
+const zlib=require("node:zlib");
 const BASE="https://www.amfiindia.com/api/populate-te-rdata-revised";
 function norm(v){
  return String(v||"").toLowerCase().replace(/&/g,"and").replace(/\s+/g," ")
