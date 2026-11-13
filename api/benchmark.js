@@ -1,7 +1,7 @@
 // Vercel serverless proxy for NSE Indices historical Total Return Index data.
 // The upstream endpoint is used by the official Nifty Indices historical-data page.
 // It is not a documented public API, so this route validates requests and returns
-// a clear upstream error. Users can also import an official TRI CSV in the app.
+// a clear upstream error. The frontend has no user upload control; unsupported indices are reported as unavailable.
 const ALLOWED = new Set([
   "NIFTY 50",
   "NIFTY 100",
@@ -62,25 +62,36 @@ module.exports = async (req, res) => {
     }
 
     const data = rows.map(row => {
-      const dateParts = String(row.Date || "").trim().split(/\s+/);
-      if (dateParts.length !== 3) return null;
-      const day = dateParts[0].padStart(2,"0");
-      const monthMap = {Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
-      const month = monthMap[dateParts[1]];
-      const year = dateParts[2];
-      const value = Number(row.TotalReturnsIndex);
-      if (!month || !Number.isFinite(value)) return null;
-      return { date: year + "-" + month + "-" + day, value };
+      const rawDate = String(row.Date || row.date || row.HistoricalDate || "").trim();
+      let isoDate = null;
+      if (/^\\d{4}-\\d{2}-\\d{2}/.test(rawDate)) {
+        isoDate = rawDate.slice(0,10);
+      } else {
+        const parts = rawDate.split(/\\s+/);
+        if (parts.length === 3) {
+          const monthMap = {Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+          const month = monthMap[parts[1]];
+          if (month) isoDate = parts[2] + "-" + month + "-" + parts[0].padStart(2,"0");
+        }
+      }
+      const rawValue = row.TotalReturnsIndex ?? row["Total Returns Index"] ?? row.TRI ?? row.value;
+      const value = Number(String(rawValue ?? "").replace(/,/g,""));
+      if (!isoDate || !Number.isFinite(value) || value <= 0) return null;
+      return {date:isoDate,value};
     }).filter(Boolean).sort((a,b) => a.date.localeCompare(b.date));
+    const dedup = new Map(data.map(x => [x.date,x.value]));
+    const clean = [...dedup.entries()].map(([date,value]) => ({date,value}));
 
-    if (!data.length) return res.status(502).json({ error: "The NSE Indices response could not be parsed. Use CSV import or retry later." });
+    if (!clean.length) return res.status(502).json({ error: "The NSE Indices response could not be parsed. Automatic benchmark metrics are unavailable until the upstream source recovers." });
 
     return res.status(200).json({
       source: "NSE Indices historical Total Return Index",
       index: indexName,
       retrievedAt: new Date().toISOString(),
-      count: data.length,
-      data
+      count: clean.length,
+      firstDate: clean[0].date,
+      lastDate: clean[clean.length-1].date,
+      data: clean
     });
   } catch (error) {
     return res.status(502).json({
