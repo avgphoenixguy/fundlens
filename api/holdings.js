@@ -258,7 +258,7 @@ function parsePortfolio(buf) {
   if (headerAt < 0) throw new Error("Workbook layout could not be validated: expected instrument name, ISIN and portfolio-weight columns");
   const nameCol = findHeader(headers, h => /^(name of the instrument|name of instrument|instrument name|security name|company name|issuer name|scrip name|stock name|particulars|name)$/.test(h) || /^(name of the instrument|instrument name|security description)/.test(h));
   const isinCol = findHeader(headers, h => h === "isin" || h === "isin no" || h === "isin number" || h.startsWith("isin "));
-  const weightCol = findHeader(headers, h => /%.*(to|of).*(nav|net assets)|weight|portfolio %|net assets %/.test(h));
+  const weightCol = findHeader(headers, h => /%.*(to|of).*(nav|net assets)|percentage to nav|weight|portfolio %|net assets %/.test(h));
   const sectorCol = findHeader(headers, h => /^(industry|sector|industry name|sector name)$/.test(h));
   const typeCol = findHeader(headers, h => /^(asset class|instrument type|security type|type)$/.test(h));
   if (nameCol < 0 || isinCol < 0 || weightCol < 0) throw new Error("Workbook columns are not sufficiently explicit to calculate holdings overlap");
@@ -276,9 +276,10 @@ function parsePortfolio(buf) {
     const equityHint = /\b(equity|shares|stock|listed equity)\b/i.test(type);
     const debtHint = isDebtLike(name, type);
     const equityByIndustry = !!sector && !!isin && isin.startsWith("INE") && !debtHint;
-    if (!(equityHint || equityByIndustry) || debtHint) { excluded++; continue; }
+    // Security identity must be a validated ISIN. Never use fuzzy company-name keys for overlap.
+    if (!(equityHint || equityByIndustry) || debtHint || !isin) { excluded++; continue; }
     holdings.push({
-      name, isin, key: isin || ("NAME:" + normalize(name)),
+      name, isin, key: isin,
       weightPct: weight,
       sector: sector || "Sector not disclosed",
       instrumentType: type || "Equity (inferred from disclosure columns)"
