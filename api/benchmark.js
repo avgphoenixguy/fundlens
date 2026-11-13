@@ -43,28 +43,40 @@ function parseRows(raw) {
 }
 async function fetchChunk(index,start,end) {
   const cinfo="{'name':'"+index+"','startDate':'"+fmtDate(start)+"','endDate':'"+fmtDate(end)+"','indexName':'"+index+"'}";
-  const response=await fetch("https://www.niftyindices.com/Backpage.aspx/getTotalReturnIndexString",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json; charset=UTF-8",
-      "Accept":"application/json, text/javascript, */*; q=0.01",
-      "Accept-Language":"en-US,en;q=0.9",
-      "Origin":"https://www.niftyindices.com",
-      "X-Requested-With":"XMLHttpRequest",
-      "Referer":"https://www.niftyindices.com/reports/historical-data",
-      "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
-    },
-    body:JSON.stringify({cinfo}),
-    signal:AbortSignal.timeout(18000)
-  });
-  const text=await response.text();
-  if(!response.ok)throw new Error("NSE returned HTTP "+response.status);
-  let raw;
-  try{raw=JSON.parse(text)}catch(e){
-    const hint=text.trim().slice(0,100).replace(/ +/g," ");
-    throw new Error("NSE returned HTML or an unrecognised response for "+toIso(start)+" to "+toIso(end)+" ("+hint+")");
+  const hosts=[
+    {base:"https://www.niftyindices.com",referer:"https://www.niftyindices.com/reports/historical-data"},
+    {base:"https://niftyindices.com",referer:"https://niftyindices.com/reports/historical-data"}
+  ];
+  const errors=[];
+  for(const host of hosts){
+    try{
+      const response=await fetch(host.base+"/Backpage.aspx/getTotalReturnIndexString",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json; charset=UTF-8",
+          "Accept":"application/json, text/javascript, */*; q=0.01",
+          "Accept-Language":"en-US,en;q=0.9",
+          "Origin":host.base,
+          "X-Requested-With":"XMLHttpRequest",
+          "Referer":host.referer,
+          "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+        },
+        body:JSON.stringify({cinfo}),
+        signal:AbortSignal.timeout(12000)
+      });
+      const text=await response.text();
+      if(!response.ok)throw new Error("HTTP "+response.status);
+      let raw;
+      try{raw=JSON.parse(text)}catch(e){
+        const hint=text.trim().slice(0,80).replace(/ +/g," ");
+        throw new Error("HTML / non-JSON response ("+hint+")");
+      }
+      const rows=parseRows(raw);
+      if(!rows.length)throw new Error("No TRI rows returned");
+      return rows;
+    }catch(error){errors.push(host.base+": "+(error.message||"request failed"))}
   }
-  return parseRows(raw);
+  throw new Error("All NSE host attempts failed for "+toIso(start)+" to "+toIso(end)+": "+errors.join("; "));
 }
 module.exports=async function handler(req,res){
   res.setHeader("Cache-Control","public, s-maxage=21600, stale-while-revalidate=86400");
