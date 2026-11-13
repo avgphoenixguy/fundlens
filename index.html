@@ -1141,7 +1141,8 @@ async function renderCompare(){
  const samePlan=identities.length>0&&identities.every(x=>x.plan===identities[0].plan);
  const sameOption=identities.length>0&&identities.every(x=>x.option===identities[0].option);
  const sameBenchmark=identities.length>0&&!!identities[0].benchmark&&identities.every(x=>x.benchmark===identities[0].benchmark);
- const benchmarkMatchesLoadedSeries=sameBenchmark&&state.benchmarkSeries.length>0&&normalizedBenchmark(state.benchmarkName)===identities[0].benchmark;
+ const sharedLatestNavDate=items.length>0&&items.every(x=>x.data.length&&dateKey(x.data[x.data.length-1].date)===dateKey(items[0].data[items[0].data.length-1].date));
+ const benchmarkMatchesLoadedSeries=sameBenchmark&&sharedLatestNavDate&&state.benchmarkSeries.length>0&&normalizedBenchmark(state.benchmarkName)===identities[0].benchmark;
  const comparisonStats=new Map(items.map(x=>[x.code,benchmarkMatchesLoadedSeries?calcAdvancedStats(x.data,state.benchmarkSeries):{}]));
  const val=(code,key,digits=2)=>{const v=comparisonStats.get(code)?.[key];return Number.isFinite(v)?fmtNum(v,digits):'Unavailable'};
  const pct=(code,key)=>{const v=comparisonStats.get(code)?.[key];return Number.isFinite(v)?fmtPct(v):'Unavailable'};
@@ -1177,7 +1178,7 @@ async function renderCompare(){
  }).join('');
  const identityOk=sameSubcategory&&samePlan&&sameOption&&sameBenchmark;
  const identityText=items.length<2?'Add a second scheme for a like-for-like peer comparison.':identityOk?'Like-for-like set: '+identities[0].subcategory+' · '+identities[0].plan+' plan · '+identities[0].option+' option · '+identities[0].benchmarkLabel+'.':'Scheme identity is not fully confirmed. Treat the table as descriptive, not like-for-like.';
- const triText=benchmarkMatchesLoadedSeries?'FundLens Alpha, Beta and tracking-error estimates use the mapped benchmark TRI with exact-date matching over the selected period.':'Mapped daily TRI is not loaded for this comparison set. FundLens Alpha, Beta and tracking error remain unavailable; no proxy series is substituted.';
+ const triText=benchmarkMatchesLoadedSeries?'FundLens Alpha, Beta and tracking-error estimates use the mapped benchmark TRI with exact-date matching over a common NAV end date and the selected period.':!sharedLatestNavDate?'The selected schemes do not share the same latest NAV date. Benchmark regression estimates are withheld until the comparison dates align.': 'Mapped daily TRI is not loaded for this comparison set. FundLens Alpha, Beta and tracking error remain unavailable; no proxy series is substituted.';
  $('compareRisk').innerHTML+='<div class="data-status '+(items.length<2||identityOk?'ok':'warn')+'">'+escapeHtml(identityText)+'</div><div class="metric-caption">* NAV-only Sharpe / Sortino use the current RBI long-dated G-Sec yield proxy held constant through the sample. † Official AMFI Information Ratio is a published source value; AMFI trailing returns are report-date snapshots, not daily regression inputs. '+escapeHtml(triText)+'</div>';
 }
 
