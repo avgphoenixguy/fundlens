@@ -2,9 +2,9 @@
 
 **Mutual Fund Research & Comparison Studio**
 
-Live prototype: <https://fundlens-studio.vercel.app/>
+Live prototype: https://fundlens-studio.vercel.app/
 
-FundLens is a research workspace for self-directed Indian mutual fund investors. It addresses a specific product opportunity: moving beyond a single trailing-return figure to understand consistency, risk-adjusted performance and benchmark-relative outcomes.
+FundLens is a research workspace for self-directed Indian mutual fund investors. It explores a product opportunity: helping investors move beyond a single trailing-return figure to understand performance consistency, risk-adjusted outcomes, benchmark context and the assumptions behind each metric.
 
 It is not a recommendation engine and does not provide investment advice.
 
@@ -12,81 +12,94 @@ It is not a recommendation engine and does not provide investment advice.
 
 ### Guided / Basic
 A plain-language experience that explains:
-- What a rolling return measures and how outcomes vary by historical investment start date.
-- The share of historical rolling windows with positive returns.
+- How rolling-return outcomes differ across historical investment start dates.
+- The share of historical windows with positive returns.
 - Median rolling CAGR and maximum observed drawdown.
-- Why a benchmark-relative conclusion cannot be drawn without a matched benchmark TRI.
+- What the current risk-free proxy means.
+- Why benchmark-relative conclusions need a real matched TRI series.
 
 ### Advanced
 A methodology-first workspace that exposes:
 - NAV-derived trailing returns, annualised volatility and maximum drawdown.
-- Sharpe and Sortino ratios using an automatically retrieved RBI 10-year G-Sec yield proxy, with its security and observation date displayed.
-- Alpha, Beta, Information Ratio, tracking error and benchmark-relative CAGR when an appropriate mapped benchmark TRI is retrieved automatically and matched by date.
-- A configurable analysis period, benchmark selection and metric explanations.
-- Category-aware interpretation for active equity, index/passive, debt and hybrid schemes. Category detection is a research aid and should be verified against the scheme's latest SID / factsheet.
+- Sharpe and Sortino estimates using an automatically retrieved RBI long-dated G-Sec proxy.
+- Official AMFI Information Ratio values for the selected Direct / Regular plan and supported 1Y / 3Y / 5Y / 10Y periods.
+- AMFI-published benchmark mapping and trailing scheme / benchmark performance.
+- Alpha, Beta, tracking error and benchmark-relative rolling returns only when a real daily benchmark TRI series is successfully matched to NAV dates.
+- Category-aware interpretation for active equity, index / passive, debt and hybrid schemes.
 
 ## Research workspaces
 
-- **Fund universe:** search scheme names / AMCs using the MFapi.in scheme directory and load scheme-level NAV history.
-- **Overview:** selected scheme metadata, NAV-based trailing returns, a normalised investment-value chart and historical drawdown.
+- **Fund universe:** search scheme names and AMCs using the MFapi.in scheme directory.
+- **Overview:** selected scheme metadata, NAV-based trailing returns, investment growth and historical drawdown.
 - **Rolling lab:** configurable 1–120 month holding windows, daily / weekly / monthly start-date sampling, absolute or annualised returns, rolling outcome chart and histogram.
-- **Compare funds:** compare up to three schemes with NAV-derived return / risk measures. The comparison is descriptive, not a universal ranking.
+- **Compare funds:** compare up to three schemes with NAV-derived return / risk measures. This is a descriptive research comparison, not a universal ranking.
 - **Risk profile:** annualised volatility, maximum drawdown, positive-day share and daily-return distribution.
-- **Source and methodology disclosures:** explain formulas, date matching, data limitations and source requirements.
+- **Advanced research:** automatic AMFI disclosures, automatic RBI risk-free proxy, metric definitions, data dates and category-specific research lenses.
 
-## Data sources and integrations
+## Automatic data integrations
 
 ### Scheme NAV
-Scheme search and NAV observations are requested from [MFapi.in](https://www.mfapi.in/docs/), a third-party API that republishes AMFI NAV disclosures. The API is not a total-return index and does not supply the complete holdings, AUM, TER or factsheet risk data. The newest date returned by that service may lag the current date.
+Scheme search and historical NAV observations are requested from MFapi.in, which republishes AMFI NAV disclosures. NAV data is not a benchmark TRI and does not supply all scheme disclosures. NAV freshness depends on the third-party provider.
+
+### AMFI Fund Performance API
+When a scheme is loaded, FundLens queries AMFI's Fund Performance API using the scheme name, inferred category and Direct / Regular plan. When an adequate name match is found, the response supplies:
+- AMFI-declared benchmark name.
+- Scheme AUM.
+- Riskometer.
+- AMFI-reported Information Ratio for 1Y, 3Y, 5Y and 10Y, plan-specific.
+- AMFI-reported trailing fund and benchmark performance for those periods.
+- Report date and retrieval timestamp.
+
+The official AMFI IR is shown separately from a FundLens-calculated IR estimate. Missing official values are shown as unavailable, never as zero.
+
+### AMFI Total Expense Ratio workbook
+FundLens automatically retrieves the latest available AMFI monthly TER workbook, looks up the selected scheme and returns Direct or Regular full TER with the TER observation date. It retries the preceding month if the current month's workbook is unavailable. If no sufficiently close scheme match exists, it does not guess a TER. A dated curated cost disclosure may be displayed as a clearly labelled fallback.
+
+### RBI risk-free proxy
+FundLens fetches the RBI Current Rates Government Securities Market page and uses the yield on the long-dated Government of India security closest to ten years to maturity. It displays the security, annual yield, source and observation date. The current yield is divided by 252 and held constant over the selected historical NAV window. This is a transparent proxy, not a historical daily risk-free curve or a maturity-matched short-term rate.
 
 ### Benchmark TRI
-Benchmark-relative metrics require a daily Total Returns Index (TRI) series for the **exact Tier 1 benchmark** declared in the current scheme SID / factsheet. For supported Nifty indices, FundLens automatically requests historical TRI observations from NSE Indices. No user upload is required. The app joins NAV and TRI on exact dates only, does not forward-fill, does not substitute a price index and does not manufacture missing observations.
+The scheme's declared benchmark is retrieved from AMFI. FundLens attempts to obtain daily Nifty TRI from the NSE Indices historical-data endpoint for supported Nifty benchmarks. The current server-side connection is returning HTML challenge responses from NSE in this environment, so benchmark TRI data is not reliably available in the public prototype at present. The UI suppresses Alpha, Beta, tracking error and benchmark-relative rolling results when matched daily TRI is absent. It does not substitute a price index or fabricate observations.
 
-For Nifty family indices, NSE Indices publishes downloadable historical Total Returns Index values through its [historical data reports](https://www.niftyindices.com/reports/historical-data). NSE explains why a TRI, which includes constituent dividends, is the appropriate comparison for total returns: [NSE Total Returns Index](https://www.nseindia.com/static/products-services/indices-total-returns-index).
+## Metric calculations
 
-### Fund disclosures
-A small set of selected-scheme AUM, cost, riskometer, benchmark and AMC-reported ratio examples is included as dated reference data. These values are **not refreshed by the NAV API**. They are not comprehensive or synchronised to one common reporting date. BER is not relabelled as TER. The source register and caveats are in `docs/REAL_FUND_DATA_SOURCES.md`.
-
-## Key calculations
-
-- **CAGR:** NAV / TRI growth over actual elapsed calendar time.
+- **CAGR:** NAV growth over actual elapsed calendar time.
 - **Volatility:** sample standard deviation of daily NAV returns multiplied by √252.
-- **Sharpe:** mean daily excess return over the RBI 10-year G-Sec proxy, divided by daily return standard deviation, multiplied by √252.
-- **Sortino:** mean daily excess return divided by downside deviation relative to the same target-rate assumption, multiplied by √252.
-- **Beta:** sample covariance of fund and benchmark daily returns divided by benchmark return variance.
-- **Alpha:** annualised daily CAPM intercept using matched fund / benchmark returns and the selected risk-free assumption.
+- **Sharpe:** mean daily scheme return less the daily RBI G-Sec proxy, divided by daily return standard deviation, multiplied by √252.
+- **Sortino:** mean daily scheme return less the same RBI G-Sec target, divided by downside deviation, multiplied by √252.
+- **Alpha:** annualised daily CAPM intercept using matched fund / benchmark returns and the RBI G-Sec proxy.
+- **Beta:** sample covariance of matched fund and benchmark daily returns divided by benchmark return variance.
+- **FundLens Information Ratio estimate:** daily arithmetic active return divided by sample standard deviation of daily active returns, annualised by √252. It is shown only when a matched benchmark TRI is available.
+- **AMFI Information Ratio:** official AMFI-published plan-specific period value, preferred over the FundLens estimate when available. It is not recalculated by FundLens.
 - **Tracking error:** sample standard deviation of daily active returns multiplied by √252.
-- **Information Ratio:** daily arithmetic active return divided by the sample standard deviation of daily active returns, using the Tier 1 benchmark. FundLens displays an annualised research estimate using √252; it is not a substitute for the official AMC / AMFI disclosed IR.
-- **Risk-free assumption:** latest available RBI Current Rates yield for a long-dated Government of India security near 10 years to maturity. The current observation is held constant across the selected historical return window; it is an explicit proxy, not a daily historical risk-free curve.
+- **Benchmark-relative rolling:** fund and benchmark CAGR over exactly the same matched NAV / TRI start and end dates.
 
-Full formulas, sample rules and limitations are documented in Advanced Metrics Methodology, Rolling Return Methodology, Category-aware Research, Automatic Data Assumptions and Prototype Scope & Limitations.
+Full formulas, source lineage and limitations are in the Advanced Metrics Methodology, Rolling Return Methodology, Category-aware Research, Automatic Data Assumptions and Prototype Scope & Limitations documents.
 
-## Running locally
+## No user uploads
 
-No package installation or build step is required.
+The current UI has no data upload controls. NAV, AMFI scheme disclosures, AMFI TER and RBI yield are retrieved automatically. Benchmark TRI is requested automatically but is currently subject to NSE's upstream challenge response. Missing benchmark data is reported rather than replaced with an unsuitable index.
 
-```bash
-python3 -m http.server 3000
-```
+## Run locally
 
-Open <http://localhost:3000>.
+No front-end package installation or build step is required.
 
-## Important limitations
+    python3 -m http.server 3000
 
-- Benchmark TRI is retrieved automatically for supported Nifty indices through a cached Vercel API route. The NSE endpoint is not a documented commercial API and can change; unsupported benchmark families remain unavailable. No user upload is required.
-- Dated scheme disclosures cover selected examples only. They are not comprehensive live AUM / TER / holdings integrations.
-- Category classification is heuristic and needs confirmation against the latest SID / factsheet.
-- NAV-based risk and return calculations depend on the availability and quality of NAV history. A NAV series alone cannot provide benchmark-relative metrics.
-- The app does not yet model derivatives look-through, transaction costs, investor cash flows, taxes, liquidity, credit migration, or complete risk across asset classes.
-- Overlapping rolling windows are not independent observations. A positive-window share is a historical sample statistic, not a forecast or probability of future profit.
+For local API routes, deploy to Vercel or run the Vercel development runtime so the /api/* serverless functions are available.
 
-FundLens is a product prototype for research and discussion, not investment advice. Verify current information with AMC, AMFI, SEBI and index-provider disclosures before making investment decisions.
+## Limitations
+
+- AMFI name matching is automated and may fail for renamed, legacy or unusual scheme names. A match must pass a similarity threshold.
+- Scheme category classification for AMFI queries uses MFAPI scheme metadata and scheme-name heuristics. Confirm the category and benchmark against the current SID / factsheet.
+- The RBI 10-year G-Sec yield is a current sovereign proxy held constant across the historical return sample. For debt funds, a duration-matched short-term sovereign reference could be more appropriate.
+- NSE's public historical TRI endpoint is not a documented commercial API and is currently returning HTML challenge responses from the Vercel serverless environment. Benchmark-dependent metrics remain unavailable until the feed works reliably or an approved index-data integration is used.
+- AMFI TER workbook formats and API endpoints may change. The app displays the TER date and does not infer missing TER values.
+- Curated AMC references are dated fallbacks only. They are not represented as live if the AMFI source is unavailable.
+- Overlapping rolling windows are not independent observations. Positive-window share is not a probability forecast.
+
+FundLens is a product research prototype, not investment advice. Verify information with AMC, AMFI, SEBI, RBI and index-provider disclosures before making investment decisions.
 
 ## Product-scope decision: portfolio overlap
 
-FundLens does not currently ship a portfolio-overlap module. Angel One already has an Angel One-hosted NXT Fund & Stock Lab page that lists an Overlap Checker, pairwise overlap matrix, common holdings, stock-to-scheme holdings search and holdings-based visualisations. The page is separate from the documented primary Mutual Funds journey, and its indexed state says the MF data snapshot needs an upstream refresh. We therefore do not pitch stock overlap as a novel FundLens feature. See `docs/COMPETITIVE_RESEARCH_PORTFOLIO_OVERLAP.md` for the distinction between the mainstream app documentation and the NXT research surface.
-
-
-## Automatic data assumptions
-
-FundLens no longer asks users to upload benchmark files. Supported Nifty benchmark TRI history is requested through the /api/benchmark route. The RBI 10-year G-Sec proxy is fetched through /api/risk-free-rate. See the Automatic Data Assumptions document for sources, observation dates, caching, category limitations and fallback behaviour.
+FundLens deliberately excludes a generic portfolio overlap checker. Angel One already has an Angel One-hosted NXT Fund & Stock Lab surface advertising overlap analysis, pairwise holdings matrices, stock search and common-holdings views. See the competitive research note on portfolio overlap.
