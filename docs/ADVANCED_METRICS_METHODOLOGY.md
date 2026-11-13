@@ -24,7 +24,8 @@ For non-Nifty benchmarks, use the official index provider and verify the benchma
 
 The Advanced workspace lets the user choose an analysis period (1Y, 3Y, 5Y, 10Y or maximum available) and the automatically retrieved RBI long-dated G-Sec yield proxy. The selected analysis period is anchored to the latest available date in the NAV series. If the scheme does not have enough observations to cover the selected period, period-dependent metrics are suppressed.
 
-The app automatically fetches the RBI Current Rates Government Securities Market table and uses the yield on the long-dated Government of India security closest to 10 years to maturity as its risk-free proxy. As observed on 12 November 2026, the RBI page showed 7.2178% for 6.94% GS 2036, with the yield dated 11 November 2026. The automatic route refreshes this value and displays the actual security and as-of date. If the RBI fetch fails, the app uses the 7.2178% observation from 11 November 2026 as a dated fallback and labels it as such.
+The app automatically fetches the RBI Current Rates Government Securities Market page and uses the yield on the long-dated Government of India security closest to 10 years to maturity as its risk-free proxy. On 13 November 2026, the live RBI page retrieved by the FundLens serverless function returned 7.2430% for 6.94% GS 2036, with the yield dated 12 November 2026. The app displays the security, rate, source and observation date. If live retrieval fails, the app uses a separately labelled fallback snapshot of 7.2178% dated 11 November 2026.
+
 
 The current yield is converted to a simple daily approximation by dividing by 252 and is held constant across the selected historical NAV window. This is a transparent simplifying assumption, not a true historical daily risk-free time series. It is used both as the excess-return rate in Sharpe / Alpha and as the downside target in Sortino. A duration-matched short-term sovereign series would be methodologically preferable for some debt-fund categories; this prototype deliberately uses the requested long-dated sovereign proxy consistently.
 
@@ -95,7 +96,7 @@ FundLens deliberately does not calculate one universal scheme score. A high equi
 
 ## 6. AMC-reported disclosures versus FundLens calculations
 
-The six-scheme reference register contains dated snapshots of scheme AUM, cost, riskometer, benchmark, selected returns and AMC-reported ratios. Those values are not fetched from the NAV API and may have different observation dates. The display retains each source date and preserves the distinction between:
+The six-scheme reference register contains dated AMC snapshots used as fallbacks when AMFI does not return a matched record. Current AMFI data takes precedence. The display retains each source date and preserves the distinction between:
 - **TER**: total expense ratio, where the source explicitly reports TER.
 - **BER**: base expense ratio, where the source reports only BER. BER is not relabelled as full TER.
 - **AMC-reported ratio**: a figure published by the AMC for its own stated period / methodology.
@@ -105,7 +106,7 @@ The UTI sample register, for example, warns that reported return data is Regular
 
 ## 7. Limitations and production requirements
 
-The prototype does not automatically discover authoritative Tier 1 benchmarks for every searched scheme. Automatic mappings are stored for the curated schemes only. Supported Nifty TRI is retrieved from the public NSE Indices historical-data endpoint through a cached serverless route; that endpoint is not a documented commercial API and may change. CRISIL and unmapped benchmarks remain unavailable. The app does not have a production data licence, licensed benchmark API or AMC disclosure integration.
+The AMFI Fund Performance API supplies scheme-specific benchmark names, AUM, Riskometer, official plan-specific IR and trailing scheme / benchmark performance when a scheme-name match is found. The AMFI monthly TER workbook supplies plan-specific full TER when a matching record is available. The app does not have automatic YTM, duration, credit-quality or holdings integration. The current NSE TRI serverless request is blocked by HTML challenge responses, so daily benchmark-dependent Alpha / Beta / tracking metrics remain unavailable until a supported feed is connected.
 
 A production build should:
 1. Connect approved benchmark and disclosure feeds with usage rights.
