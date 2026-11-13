@@ -268,7 +268,7 @@ const seeds=[
  {code:143269,name:'Parag Parikh Liquid Fund - Direct Plan - Growth'},
  {code:154155,name:'Parag Parikh Large Cap Fund - Direct Plan - Growth'}
 ];
-const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:''};
+const state={code:122639,meta:null,data:[],history:[],range:'3Y',page:'overview',search:[],searchPlan:'all',compare:[],pendingCode:null,window:36,frequency:'weekly',returnType:'cagr',rolling:[],chartLoading:false,cache:new Map(),loadRequest:0,benchmarkSeries:[],benchmarkName:'',amfiPerformance:null};
 const $=id=>document.getElementById(id);
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3200)}
 function fmtPct(v,d=2){return Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(d)+'%':'—'}
@@ -298,14 +298,31 @@ function setBenchmarkDefault(){
  const ref=referenceDisclosure[state.code],name=ref?.benchmark||benchmarkDefaults[state.code]||'';
  const el=$('benchmarkName');
  if(el){el.value=Array.from(el.options).some(o=>o.value===name||o.text===name)?name:'';state.benchmarkName=el.value}
- state.benchmarkSeries=[];
- if($('benchmarkMapping'))$('benchmarkMapping').textContent=state.benchmarkName||'No verified benchmark mapping for this scheme';
- if($('benchmarkStatus')){$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent=state.benchmarkName?'Automatically mapping '+state.benchmarkName+' to NSE Indices TRI history…':'No verified Tier 1 benchmark mapping is stored for this scheme. FundLens will not infer one from category alone.'}
+ state.benchmarkSeries=[];state.amfiPerformance=null;
+ if($('benchmarkMapping'))$('benchmarkMapping').textContent='Fetching scheme benchmark from AMFI…';
+ if($('benchmarkStatus')){$('benchmarkStatus').className='data-status warn';$('benchmarkStatus').textContent='FundLens is retrieving scheme benchmark and official IR data from AMFI.'}
+}
+function amfiCategoryForScheme(meta,name){
+ const s=((meta?.scheme_category||'')+' '+(name||'')).toLowerCase();
+ if(/hybrid|balanced advantage|aggressive hybrid|conservative hybrid|multi asset|equity savings|arbitrage/.test(s))return 3;
+ if(/debt|liquid|overnight|money market|gilt|duration|credit risk|corporate bond|floater/.test(s))return 2;
+ if(/solution|retirement|children/.test(s))return 4;
+ if(/index|etf|fund of fund|fof/.test(s))return 5;
+ if(/equity|large cap|mid cap|small cap|flexi cap|multi cap|value|contra|focused|elss|sectoral|thematic/.test(s))return 1;
+ return '';
+}
+function planForScheme(name){
+ return /regular/i.test(String(name||''))?'regular':'direct';
+}
+function supportedNiftyBenchmark(name){
+ const n=String(name||'').toUpperCase().replace(/\\bTRI\\b/g,'').replace(/[^A-Z0-9]+/g,' ').trim();
+ const list=['NIFTY 50','NIFTY 100','NIFTY 500','NIFTY NEXT 50','NIFTY MIDCAP 150','NIFTY SMALLCAP 250'];
+ return list.find(x=>n===x||n.startsWith(x+' '))||null;
 }
 function parseFlexibleDate(v){if(!v)return null;const s=String(v).trim();let m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[-/ ]([A-Za-z]{3,}|\d{1,2})[-/ ](\d{2,4})$/);if(m){const mon=Number(m[2])?Number(m[2])-1:new Date(m[2]+' 1, 2000').getMonth();let y=Number(m[3]);if(y<100)y+=y>=70?1900:2000;return new Date(y,mon,+m[1])}return parseDate(s)}
 async function loadAutomaticResearchInputs(request){
  if(request!==state.loadRequest||!state.data.length)return;
- $('automaticDataUpdated').textContent='Fetching RBI G-Sec and benchmark data…';
+ $('automaticDataUpdated').textContent='Fetching RBI and AMFI research inputs…';
  const rfTask=(async()=>{
   try{
    const res=await fetch('/api/risk-free-rate',{headers:{'Accept':'application/json'}});
@@ -313,57 +330,76 @@ async function loadAutomaticResearchInputs(request){
    const body=await res.json();
    if(!Number.isFinite(Number(body.rate)))throw new Error('RBI rate response is invalid');
    $('rfRate').value=Number(body.rate).toFixed(4);
-   $('rfRateDisplay').innerHTML='<b>'+Number(body.rate).toFixed(4)+'% p.a.</b><br>'+escapeHtml(body.security||'10-year Government of India security')+' · as of '+escapeHtml(body.asOf||'date not supplied')+'<br><span class="tiny">'+escapeHtml(body.source||'RBI')+(body.isFallback?' · fallback snapshot':' · automatically refreshed')+'</span>';
+   $('rfRateDisplay').innerHTML='<b>'+Number(body.rate).toFixed(4)+'% p.a.</b><br>'+escapeHtml(body.security||'10-year Government of India security')+' · as of '+escapeHtml(body.asOf||'date not supplied')+'<br><span class="tiny">'+escapeHtml(body.source||'RBI')+(body.isFallback?' · fallback snapshot':' · automatically refreshed')+'</span><br><span class="tiny">Held constant across the selected historical window; not a daily risk-free curve.</span>';
    return {ok:true,body};
   }catch(e){
    $('rfRate').value='7.2178';
-   $('rfRateDisplay').innerHTML='<b>7.2178% p.a.</b><br>6.94% GS 2036 · as of 11 Nov 2026<br><span class="tiny">Official RBI fallback snapshot · live refresh failed</span>';
+   $('rfRateDisplay').innerHTML='<b>7.2178% p.a.</b><br>6.94% GS 2036 · as of 11 Nov 2026<br><span class="tiny">Official RBI fallback snapshot · held constant across selected sample.</span>';
    return {ok:false,error:e.message};
   }
  })();
- let benchmarkResult={ok:false};
- if(state.benchmarkName){
-  const apiName=state.benchmarkName.replace(/\s+TRI$/i,'').trim();
-  const supported=['NIFTY 50','NIFTY 100','NIFTY 500','NIFTY NEXT 50','NIFTY MIDCAP 150','NIFTY SMALLCAP 250'].includes(apiName.toUpperCase());
-  if(supported){
-   const start=dateKey(state.data[0].date),end=dateKey(state.data[state.data.length-1].date);
-   try{
-    const url='/api/benchmark?index='+encodeURIComponent(apiName.toUpperCase())+'&start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end);
-    const res=await fetch(url,{headers:{'Accept':'application/json'}});
-    const body=await res.json();
-    if(!res.ok)throw new Error(body.error||'NSE TRI endpoint returned HTTP '+res.status);
-    const data=(body.data||[]).map(x=>({date:parseFlexibleDate(x.date),value:Number(x.value)}))
-      .filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.value)&&x.value>0)
-      .sort((a,b)=>a.date-b.date);
-    if(data.length<30)throw new Error('Fewer than 30 TRI observations were returned.');
-    if(request!==state.loadRequest)return;
-    state.benchmarkSeries=data;
-    benchmarkResult={ok:true,body};
-    $('benchmarkMapping').textContent=state.benchmarkName+' · auto-mapped';
-    $('benchmarkStatus').className='data-status ok';
-    $('benchmarkStatus').textContent='Automatically loaded '+data.length.toLocaleString('en-IN')+' NSE TRI observations for '+state.benchmarkName+', '+data[0].date.toLocaleDateString('en-IN')+' to '+data.at(-1).date.toLocaleDateString('en-IN')+'. Exact-date matching only. Source: NSE Indices.';
-   }catch(e){
-    state.benchmarkSeries=[];
-    $('benchmarkStatus').className='data-status warn';
-    $('benchmarkStatus').textContent='Automatic TRI retrieval failed for '+state.benchmarkName+': '+e.message+'. Sharpe / Sortino remain available using the RBI proxy; Alpha / Beta / IR / tracking error are suppressed.';
-    benchmarkResult={ok:false,error:e.message};
+ const schemeName=getName(),schemeCategory=state.meta?.scheme_category||'',category=amfiCategoryForScheme(state.meta,schemeName),plan=planForScheme(schemeName);
+ let amfiResult={ok:false};
+ try{
+  const q='/api/amfi-performance?name='+encodeURIComponent(schemeName)+'&schemeCategory='+encodeURIComponent(schemeCategory)+'&category='+encodeURIComponent(category)+'&plan='+encodeURIComponent(plan);
+  const res=await fetch(q,{headers:{'Accept':'application/json'}});
+  const body=await res.json();
+  if(!res.ok)throw new Error(body.error||'AMFI scheme disclosure request returned HTTP '+res.status);
+  if(request!==state.loadRequest)return;
+  state.amfiPerformance=body;
+  if(body.benchmark){
+   state.benchmarkName=body.benchmark;
+   const select=$('benchmarkName');
+   if(select){
+    let opt=[...select.options].find(o=>o.value===body.benchmark||o.text===body.benchmark);
+    if(!opt){opt=document.createElement('option');opt.value=body.benchmark;opt.textContent=body.benchmark;select.appendChild(opt)}
+    select.value=body.benchmark;
    }
-  }else{
+  }
+  $('benchmarkMapping').textContent=(body.benchmark||'No benchmark returned by AMFI')+' · AMFI report '+(body.reportDate||'date not supplied');
+  $('disclosureLens')&&renderDisclosureLens();
+  amfiResult={ok:true,body};
+ }catch(e){
+  state.amfiPerformance=null;
+  $('benchmarkMapping').textContent=(state.benchmarkName||'No scheme benchmark mapping')+' · AMFI feed unavailable';
+  amfiResult={ok:false,error:e.message};
+ }
+ const rfResult=await rfTask;
+ if(request!==state.loadRequest)return;
+ let benchmarkResult={ok:false};
+ const mappedName=state.amfiPerformance?.benchmark||state.benchmarkName;
+ const apiName=supportedNiftyBenchmark(mappedName);
+ if(apiName){
+  try{
+   const start=dateKey(state.data[0].date),end=dateKey(state.data[state.data.length-1].date);
+   const url='/api/benchmark?index='+encodeURIComponent(apiName)+'&start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end);
+   const res=await fetch(url,{headers:{'Accept':'application/json'}});
+   const body=await res.json();
+   if(!res.ok)throw new Error(body.error||'NSE TRI endpoint returned HTTP '+res.status);
+   const data=(body.data||[]).map(x=>({date:parseFlexibleDate(x.date),value:Number(x.value)}))
+    .filter(x=>x.date instanceof Date&&!isNaN(x.date)&&Number.isFinite(x.value)&&x.value>0)
+    .sort((a,b)=>a.date-b.date);
+   if(data.length<30)throw new Error('Fewer than 30 TRI observations were returned.');
+   if(request!==state.loadRequest)return;
+   state.benchmarkSeries=data;
+   benchmarkResult={ok:true,body};
+   $('benchmarkStatus').className='data-status ok';
+   $('benchmarkStatus').textContent='Loaded '+data.length.toLocaleString('en-IN')+' NSE TRI observations for AMFI-mapped '+mappedName+', '+data[0].date.toLocaleDateString('en-IN')+' to '+data.at(-1).date.toLocaleDateString('en-IN')+'. Exact-date matching only.';
+  }catch(e){
    state.benchmarkSeries=[];
    $('benchmarkStatus').className='data-status warn';
-   $('benchmarkStatus').textContent='Automatic TRI retrieval is not currently connected for '+state.benchmarkName+'. No substitute index is used. Sharpe / Sortino remain available using the RBI proxy; benchmark-relative ratios are suppressed.';
-   benchmarkResult={ok:false,error:'Unsupported benchmark family'};
+   $('benchmarkStatus').textContent='AMFI mapping found: '+(mappedName||'unknown')+'. Automatic NSE TRI retrieval failed: '+e.message+'. NAV ratios and AMFI-reported IR remain available; Alpha / Beta / calculated tracking ratios are suppressed.';
+   benchmarkResult={ok:false,error:e.message};
   }
  }else{
   state.benchmarkSeries=[];
   $('benchmarkStatus').className='data-status warn';
-  $('benchmarkStatus').textContent='No verified benchmark mapping is available for this scheme. Sharpe / Sortino use the RBI G-Sec proxy. Benchmark-relative Alpha / Beta / IR / tracking error are not estimated.';
-  benchmarkResult={ok:false,error:'No verified benchmark mapping'};
+  $('benchmarkStatus').textContent=amfiResult.ok?'AMFI benchmark: '+(mappedName||'not supplied')+'. Automatic TRI history is not connected for this benchmark family. Official AMFI IR may still be available; Alpha / Beta / tracking error are suppressed.':'AMFI benchmark mapping unavailable. Benchmark-relative metrics are suppressed rather than guessed.';
+  benchmarkResult={ok:false,error:'No supported daily TRI connector for benchmark'};
  }
- const rfResult=await rfTask;
  if(request!==state.loadRequest)return;
- $('automaticDataUpdated').textContent='G-Sec '+(rfResult.ok?'refreshed':'fallback')+' · TRI '+(benchmarkResult.ok?'refreshed':'not available');
- renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare();
+ $('automaticDataUpdated').textContent='RBI '+(rfResult.ok?'live':'fallback')+' · AMFI '+(amfiResult.ok?'scheme data loaded':'unavailable')+' · TRI '+(benchmarkResult.ok?'loaded':'not available');
+ renderResearchMetrics();renderGuidedResearch();renderRelativeRolling();renderCompare();renderDisclosureLens();
 }
 function calcRelativeRolling(){
  const matched=matchedReturns();
@@ -427,21 +463,42 @@ function setMetric(id,value,note){const el=$(id);if(!el)return;el.textContent=va
 function renderResearchMetrics(){
  if(!state.data.length)return;
  const m=calcAdvancedStats(),ready=Number.isFinite(m.beta),kind=classifyScheme(state.meta,getName());
- setMetric('metricSharpe',Number.isFinite(m.sharpe)?fmtNum(m.sharpe,2):'Unavailable','Annualised using the visible risk-free assumption.');
- setMetric('metricSortino',Number.isFinite(m.sortino)?fmtNum(m.sortino,2):'Unavailable','Downside deviation relative to the selected target.');
+ setMetric('metricSharpe',Number.isFinite(m.sharpe)?fmtNum(m.sharpe,2):'Unavailable','NAV-derived annualised estimate using the displayed RBI 10Y G-Sec proxy.');
+ setMetric('metricSortino',Number.isFinite(m.sortino)?fmtNum(m.sortino,2):'Unavailable','NAV-derived downside estimate using the same RBI 10Y G-Sec proxy as the target rate.');
  const primary=kind==='equity',passive=kind==='index',benchmarkSuitable=ready&&(primary||passive);
- setMetric('metricAlpha',primary?(ready?fmtPct(m.alpha):'Unavailable'):'Not primary',primary?'CAPM daily regression intercept, annualised.':'Not a primary evaluation measure for this category.');
+ setMetric('metricAlpha',primary?(ready?fmtPct(m.alpha):'Unavailable'):'Not primary',primary?'CAPM daily regression intercept, annualised. Requires matched Tier 1 benchmark TRI.':'Not a primary evaluation measure for this category.');
  setMetric('metricBeta',primary?(ready?fmtNum(m.beta,2):'Unavailable'):'Not primary',primary?'Matched daily NAV and TRI returns.':'Use category-specific risk measures instead.');
- setMetric('metricIR',primary?(ready?fmtNum(m.ir,2):'Unavailable'):'Not primary',primary?'Annualised daily arithmetic active return / annualised SD of daily excess returns (√252). Tier 1 benchmark required. Not AMC-reported IR.':'Not a primary evaluation measure for this category.');
+ const periodKey=({'12':'1Y','36':'3Y','60':'5Y','120':'10Y'})[$('analysisPeriod')?.value]||'';
+ const officialIR=primary?Number(state.amfiPerformance?.informationRatio?.[periodKey]):NaN;
+ const irIsOfficial=Number.isFinite(officialIR);
+ const irValue=irIsOfficial?fmtNum(officialIR,3):(ready&&primary?fmtNum(m.ir,2):'Unavailable');
+ const irNote=irIsOfficial?'Official AMFI-disclosed '+periodKey+' IR · '+(state.amfiPerformance?.plan||planForScheme(getName()))+' plan · AMFI report '+(state.amfiPerformance?.reportDate||'date not supplied')+'.':'FundLens annualised daily research estimate (√252), not AMC-reported IR. Requires exact-date-matched Tier 1 TRI.';
+ setMetric('metricIR',primary?irValue:'Not primary',irIsOfficial||ready?irNote:'No AMFI IR value for this period and no matched TRI series. No IR is invented.');
  setMetric('metricTE',benchmarkSuitable?fmtPct(m.te):passive?'Unavailable':'Not primary',passive?'Annualised standard deviation of daily active returns.':'Tracking error is primarily used for passive replication analysis.');
  setMetric('metricBenchmarkCagr',benchmarkSuitable?fmtPct(m.benchCagr):'Unavailable','Matched TRI period, same dates as fund.');
  setMetric('metricExcessCagr',benchmarkSuitable?fmtPct(m.excessCagr):'Unavailable',passive?'Tracking difference proxy over matched period.':'Fund CAGR less benchmark CAGR over matched dates.');
  const rf=Number($('rfRate')?.value||0),period=$('analysisPeriod')?.selectedOptions?.[0]?.text||'3 years';
- $('metricCoverage').textContent=ready?'Category lens: '+categoryName(state.meta,getName())+'. Analysis period: '+period+'. Matched '+m.matched.toLocaleString('en-IN')+' daily returns, '+m.from.toLocaleDateString('en-IN')+' to '+m.to.toLocaleDateString('en-IN')+'. Benchmark: '+state.benchmarkName+'. Risk-free assumption: '+rf.toFixed(2)+'% p.a.':'Analysis period: '+period+'. NAV-only Sharpe / Sortino use the visible '+rf.toFixed(2)+'% p.a. risk-free assumption. Some measures are suppressed: '+(m.reason||'Benchmark TRI not loaded or not a primary measure for this category.');
+ const report=state.amfiPerformance?.reportDate?' AMFI scheme disclosures as of '+state.amfiPerformance.reportDate+'.':'';
+ $('metricCoverage').textContent=ready?'Category lens: '+categoryName(state.meta,getName())+'. Analysis period: '+period+'. Matched '+m.matched.toLocaleString('en-IN')+' daily returns, '+m.from.toLocaleDateString('en-IN')+' to '+m.to.toLocaleDateString('en-IN')+'. Benchmark: '+state.benchmarkName+'. Risk-free proxy: current RBI 10Y G-Sec '+rf.toFixed(4)+'% p.a., held constant through the selected sample.'+report:'Analysis period: '+period+'. NAV-only Sharpe / Sortino use the current RBI 10Y G-Sec proxy '+rf.toFixed(4)+'% p.a., held constant through the selected historical sample.'+report+' Alpha / Beta / tracking error require matched benchmark TRI; official AMFI IR is shown separately when available.';
  renderCategoryLens(m);
 }
 function renderCategoryLens(m){const kind=classifyScheme(state.meta,getName()),ref=referenceDisclosure[state.code]||{},roll=state.rolling||[];let h='<div class="method-row"><b>Detected category</b><span>'+escapeHtml(categoryName(state.meta,getName()))+'</span></div>';if(kind==='equity'){h+='<div class="method-row"><b>Evaluation lens</b><span>Rolling consistency, benchmark-relative excess return, downside risk and cost.</span></div><div class="method-row"><b>Positive rolling windows</b><span>'+(roll.length?(roll.filter(x=>x.value>0).length/roll.length*100).toFixed(1)+'%':'Insufficient history')+'</span></div><div class="method-row"><b>Benchmark</b><span>'+escapeHtml(state.benchmarkName||'Confirm from latest SID / factsheet')+'</span></div><div class="method-row"><b>Relevant measures</b><span>Sharpe, Sortino, Alpha, Beta, Information Ratio, tracking error, drawdown.</span></div>'}else if(kind==='index'){h+='<div class="method-row"><b>Evaluation lens</b><span>Tracking difference, tracking error, Direct-plan TER and replication.</span></div><div class="method-row"><b>Tracking difference</b><span>'+(Number.isFinite(m.excessCagr)?fmtPct(m.excessCagr):'Requires matched TRI')+'</span></div><div class="method-row"><b>Tracking error</b><span>'+(Number.isFinite(m.te)?fmtPct(m.te):'Requires matched daily TRI')+'</span></div><div class="method-row"><b>Cost / TER</b><span>'+(ref.cost?ref.cost+' ('+ref.costLabel+')':'Not sourced for this scheme')+'</span></div>'}else if(kind==='debt'){h+='<div class="method-row"><b>Evaluation lens</b><span>Credit quality, YTM, modified duration, maturity profile, liquidity and cost.</span></div><div class="method-row"><b>YTM</b><span>'+(ref.reported?.match(/YTM [^·]+/)?.[0]||'Requires latest AMC factsheet')+'</span></div><div class="method-row"><b>Modified duration</b><span>'+(ref.reported?.match(/Modified duration [^·]+/)?.[0]||'Requires latest AMC factsheet')+'</span></div><div class="method-row"><b>Credit quality</b><span>Not inferred from NAV. Inspect the portfolio disclosure.</span></div>'}else{h+='<div class="method-row"><b>Evaluation lens</b><span>Equity / debt allocation, sleeve-level risk, duration, credit exposures and rebalancing.</span></div><div class="method-row"><b>Debt-side disclosures</b><span>'+(ref.reported||'YTM and duration require latest AMC factsheet')+'</span></div><div class="method-row"><b>Allocation split</b><span>Import latest portfolio disclosure to inspect equity, debt and cash weights.</span></div>'}$('categoryLens').innerHTML=h}
-function renderDisclosureLens(){const r=referenceDisclosure[state.code];if(!r){$('disclosureLens').innerHTML='<div class="data-status warn">No curated AMC snapshot is mapped to this scheme. Do not infer AUM, TER, riskometer or benchmark from NAV. Use the latest AMC factsheet / SID.</div>';return}$('disclosureLens').innerHTML='<div class="method-row"><b>Scheme AUM</b><span>'+r.aum+' · '+r.aumDate+'</span></div><div class="method-row"><b>Cost disclosure</b><span>'+r.cost+' · '+r.costLabel+' · '+r.costDate+'</span></div><div class="method-row"><b>Riskometer</b><span>'+r.risk+'</span></div><div class="method-row"><b>Benchmark</b><span>'+r.benchmark+'</span></div><div class="method-row"><b>AMC-reported stats</b><span>'+r.reported+'</span></div><div class="data-status warn">'+escapeHtml(r.note)+'</div><div class="metric-caption">Source: <a class="source-link" href="'+r.source+'" target="_blank" rel="noopener">'+escapeHtml(r.sourceLabel)+' ↗</a>. Dated source snapshot, not a live feed. Kept separate from calculated metrics.</div>'}
+function renderDisclosureLens(){
+ const live=state.amfiPerformance,ref=referenceDisclosure[state.code]||{};
+ if(!live&&!referenceDisclosure[state.code]){
+  $('disclosureLens').innerHTML='<div class="data-status warn">AMFI scheme disclosures unavailable for this scheme. AUM, TER, Riskometer and benchmark are not inferred from NAV.</div>';return;
+ }
+ const aum=live&&Number.isFinite(Number(live.aumCr))?'₹'+Number(live.aumCr).toLocaleString('en-IN',{maximumFractionDigits:2})+' Cr · AMFI report '+(live.reportDate||'date not supplied'):(ref.aum||'Not supplied');
+ const risk=(live&&live.riskometer)||ref.risk||'Not supplied';
+ const benchmark=(live&&live.benchmark)||ref.benchmark||'Not supplied';
+ const cost=ref.cost?ref.cost+' · '+ref.costLabel+' · '+ref.costDate:'Not available from the current AMFI performance feed';
+ const officialIr=live?.informationRatio||{};
+ const irText=['1Y','3Y','5Y','10Y'].map(k=>Number.isFinite(Number(officialIr[k]))?k+' '+Number(officialIr[k]).toFixed(3):null).filter(Boolean).join(' · ')||'Not supplied';
+ const source=live?'AMFI Fund Performance API':'Curated AMC snapshot';
+ const sourceLink=live?'https://www.amfiindia.com/polling/amfi/fund-performance':(ref.source||'#');
+ const sourceLabel=live?'AMFI current scheme disclosure':(ref.sourceLabel||'AMC source');
+ $('disclosureLens').innerHTML='<div class="method-row"><b>Scheme AUM</b><span>'+escapeHtml(aum)+'</span></div><div class="method-row"><b>Cost disclosure</b><span>'+escapeHtml(cost)+'</span></div><div class="method-row"><b>Riskometer</b><span>'+escapeHtml(risk)+(live?' · AMFI':'')+'</span></div><div class="method-row"><b>Benchmark</b><span>'+escapeHtml(benchmark)+'</span></div><div class="method-row"><b>AMFI-reported IR</b><span>'+escapeHtml(irText)+'</span></div><div class="data-status '+(live?'ok':'warn')+'">'+escapeHtml(live?'Automatically retrieved from AMFI. Report date: '+(live.reportDate||'not supplied')+'. Plan: '+live.plan+'.':'Using a dated curated AMC source snapshot only. This is not a live disclosure.')+'</div><div class="metric-caption">Source: <a class="source-link" href="'+sourceLink+'" target="_blank" rel="noopener">'+escapeHtml(sourceLabel)+' ↗</a>. AUM / benchmark / Riskometer / IR are AMFI-reported values, kept separate from FundLens NAV calculations. TER is not supplied by this AMFI endpoint.</div>';
+}
 function renderGuidedResearch(){if(!state.data.length)return;const roll=state.rolling?.length?state.rolling:calcRolling(state.data,Number($('windowSlider')?.value||36),$('frequency')?.value||'weekly','cagr'),v=roll.map(x=>x.value),positive=v.length?v.filter(x=>x>0).length/v.length*100:NaN,med=median(v),dd=maxDrawdown(state.data);$('guidedPositive').textContent=Number.isFinite(positive)?positive.toFixed(1)+'%':'Not enough history';$('guidedMedian').textContent=Number.isFinite(med)?fmtPct(med):'—';$('guidedDrawdown').textContent=Number.isFinite(dd)?fmtPct(dd):'—';$('guidedPositiveNote').textContent=roll.length+' overlapping windows · '+Number($('windowSlider')?.value||36)+'-month holding period';$('guidedMedianNote').textContent='Median annualised CAGR across eligible start dates';const m=calcAdvancedStats(),kind=classifyScheme(state.meta,getName());let n=roll.length?'Across '+roll.length+' overlapping historical windows, '+positive.toFixed(1)+'% ended positive. The median annualised outcome was '+fmtPct(med)+'. Past outcomes do not predict future returns.':'Not enough history for this rolling window. Try a shorter holding period.';n+=Number.isFinite(m.beta)?' Against '+state.benchmarkName+', matched analysis shows '+fmtPct(m.excessCagr)+' CAGR difference over the common period. Open Advanced for risk-adjusted ratios.':' Benchmark-relative conclusions are withheld until a matched TRI is loaded. NAV-only data cannot show whether the fund beat its benchmark.';if(kind==='debt')n+=' For debt funds, also examine credit quality, yield and duration.';if(kind==='hybrid')n+=' For hybrid funds, inspect equity and debt exposures separately.';$('guidedNarrative').textContent=n}
 function setExperience(view){document.body.dataset.view=view;document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));try{sessionStorage.setItem('fundlens-view',view)}catch(e){}if(state.page==='compare')renderCompare()}
 document.querySelectorAll('.mode-switch [data-view]').forEach(b=>b.addEventListener('click',()=>setExperience(b.dataset.view)));
@@ -536,7 +593,7 @@ async function loadScheme(code){
    cached={meta:body.meta||{},data:parsed};state.cache.set(code,cached);
   }
   if(request!==state.loadRequest)return;
-  state.meta=cached.meta;state.data=cached.data;state.history=cached.data;state.range=state.data.length>1500?'3Y':'MAX';setBenchmarkDefault();updateOverview();loadAutomaticResearchInputs(request);
+  state.meta=cached.meta;state.data=cached.data;state.history=cached.data;state.amfiPerformance=null;state.range=state.data.length>1500?'3Y':'MAX';setBenchmarkDefault();updateOverview();loadAutomaticResearchInputs(request);
   if(state.page==='rolling')renderRolling();if(state.page==='risk')renderRisk();toast('Loaded '+state.data.length.toLocaleString('en-IN')+' NAV observations'+(state.cache.size>1?' · '+state.cache.size+' schemes cached':'')+'.');
  }catch(e){if(request!==state.loadRequest)return;$('apiState').textContent='DATA UNAVAILABLE';$('apiState').className='tag red';$('navChart').innerHTML='<div class="empty">'+e.message+'<br><a href="https://www.mfapi.in/docs/" target="_blank" rel="noopener">Check NAV API documentation ↗</a></div>';toast('Could not load this scheme. '+e.message)}
 }
