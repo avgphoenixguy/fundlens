@@ -35,7 +35,7 @@ When the weekly TRI-derived benchmark series is available, FundLens uses exact-d
 3. Calculates fund CAGR and benchmark CAGR over the same matched start and end dates.
 4. Records excess CAGR as fund CAGR less benchmark CAGR.
 
-The interface reports the share of matched windows where fund CAGR exceeded benchmark CAGR, median excess CAGR and the number of matched windows. Five or more matched holding windows are required to show an aggregate result. When the main rolling lab uses monthly sampling, benchmark-relative starts are spaced every four weekly observations; otherwise they remain weekly. These are historical descriptive statistics, not probabilities of future outperformance. The current weekly connector is committed in GitHub but not yet verified in the paused Netlify production deployment.
+The interface reports the share of matched windows where fund CAGR exceeded benchmark CAGR, median excess CAGR and the number of matched windows. Five or more matched holding windows are required to show an aggregate result. When the main rolling lab uses monthly sampling, benchmark-relative starts are spaced every four weekly observations; otherwise they remain weekly. These are historical descriptive statistics, not probabilities of future outperformance. The deployed `/api/benchmark` route must return validated weekly TRI-derived observations before the interface can calculate benchmark-relative rolling outcomes.
 
 ## Risk metrics in other workspaces
 
