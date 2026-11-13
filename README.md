@@ -4,7 +4,7 @@
 
 **Live deployment (Cloudflare Workers):** [https://fundlens.krishnalahoti2004.workers.dev](https://fundlens.krishnalahoti2004.workers.dev)
 
-**Angel One Portfolio Fit case-study prototype:** [Open live prototype](https://fundlens.krishnalahoti2004.workers.dev/portfolio-fit/)
+**Angel One Portfolio Fit case-study prototype:** [Open live prototype](https://fundlens.krishnalahoti2004.workers.dev/portfolio-fit/?demo=1)
 
 The standalone concept is served from `case-study/portfolio-fit/index.html` at `/portfolio-fit/`. It is a demonstration of an optional portfolio-context layer inside Angel One Mutual Funds, uses synthetic holdings and values, and is not connected to Angel One accounts, orders, PAN or OTP.
 
