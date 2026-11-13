@@ -20,27 +20,27 @@ The product proposition is a category-aware, explainable research workspace with
 | NAV history | Historical NAV download and NAV-derived trailing performance | MFapi.in API availability |
 | Rolling consistency | Configurable holding window, sampling frequency, distribution, best / worst / median / average and positive-window share | Scheme NAV history |
 | Benchmark-relative rolling | Same-date matched fund and TRI CAGR across holding windows | Automatically retrieved NSE TRI for supported Nifty benchmarks; no substitute for unsupported CRISIL / unmapped indices |
-| Risk-adjusted scorecard | NAV Sharpe / Sortino, matched Alpha / Beta / Information Ratio / tracking error | Risk-free assumption; benchmark TRI required for benchmark metrics |
+| Risk-adjusted scorecard | NAV Sharpe / Sortino; official AMFI IR; matched Alpha / Beta / calculated IR / tracking error only when daily TRI is available | RBI 10Y G-Sec proxy; AMFI official IR; daily TRI for regression metrics |
 | Category-aware lens | Distinct active equity, index / passive, debt and hybrid research priorities | Heuristic scheme classification plus user verification |
-| Dated scheme references | Selected-scheme AUM, costs, riskometer, benchmark and source snapshots | Curated dated sources, not updated by NAV API |
+| Automatic disclosures | AMFI AUM, Riskometer, benchmark, plan-specific official IR, trailing fund / benchmark performance, and plan-specific full TER | AMFI Fund Performance API and monthly TER workbook; curated snapshots are fallbacks |
 | Portfolio overlap | Not included. Deliberately excluded after finding an Angel One-hosted NXT overlap tool | Not a FundLens differentiator |
 | Comparison | Up to three scheme comparison and NAV-derived return / risk summaries | Loaded NAV histories; matching category / plan / option still matters |
 
 ## What is not an automatic live integration
 
 The prototype does not have a production data agreement, API key or backend connection for:
-- Official benchmark TRI history from NSE Indices or other index providers.
-- Universal live TER, AUM, YTM, duration, credit and manager disclosures.
+- A reliable daily benchmark TRI provider. The current NSE public endpoint returns an HTML challenge when called from the Vercel serverless environment.
+- Automatic YTM, duration, credit-quality, manager and holdings disclosures for every scheme. AUM, Riskometer, IR, benchmark and TER are retrieved automatically when AMFI returns a sufficiently close scheme match.
 - Automatic effective-dated mapping from scheme code to the current Tier 1 benchmark.
 - User portfolios from Angel One accounts or demat / CAS statements.
 
-Supported Nifty TRI is retrieved automatically through a cached serverless route. The current RBI G-Sec yield proxy is retrieved automatically and held constant across the selected sample. Dated curated AUM / TER / risk disclosures should not be described as live.
+AMFI scheme details and TER are retrieved automatically through cached serverless routes when matched. The RBI G-Sec yield proxy is fetched and held constant across the selected sample. Daily Nifty TRI requests are attempted but currently blocked by NSE HTML challenge responses. Curated disclosures are dated fallbacks only.
 
 ## Why these gaps remain
 
-1. **Benchmark source / licensing:** official index data is published through index-provider channels, but a public prototype should not scrape, redistribute or republish it as a permanent data service without checking provider terms and obtaining appropriate access.
-2. **Scheme-to-benchmark mapping:** the authoritative benchmark is scheme-specific and can change. It must be checked against the current SID / factsheet, not guessed from the fund name.
-3. **Static app architecture:** the current product is a single-page static website. The automatic benchmark and RBI routes are cached serverless integrations, but there is no database, user authentication, persisted user portfolio or audited calculation service.
+1. **Benchmark source / licensing:** official index data is published through index-provider channels, but the current public NSE endpoint returns an HTML challenge to serverless requests. A production build should use an approved index-data API or subscription.
+2. **Scheme-to-benchmark mapping:** AMFI supplies the declared scheme benchmark for matched records. It must still be checked against the current SID / factsheet because the benchmark is scheme-specific and can change.
+3. **Static app architecture:** the current product is a single-page static website with cached serverless API routes. There is no database, user authentication, persisted user portfolio or audited calculation service.
 
 These gaps do not make the product concept impossible. They are reasons not to pretend those capabilities are already live. A production build would connect approved provider data, add normalisation and validation, version source snapshots, and display freshness / coverage per metric.
 
@@ -82,4 +82,9 @@ That technical feasibility does not make a generic overlap module a FundLens opp
 
 ## Automatic inputs and user uploads
 
-The live UI does not ask the investor to upload benchmark TRI or any other data file. Scheme NAV is requested from MFapi.in when a fund is loaded. Supported Nifty TRI is retrieved automatically through the FundLens /api/benchmark route. The RBI current 10-year G-Sec yield proxy is retrieved through /api/risk-free-rate. The selected annual yield is held constant across the historical NAV window and is visible with its source and as-of date. The curated scheme benchmark mapping is source-checked; other scheme mappings are not guessed. CRISIL benchmark families remain unsupported by automatic TRI retrieval.
+The live UI has no upload controls. Scheme NAV is requested from MFapi.in. AMFI Fund Performance supplies benchmark mapping, AUM, Riskometer, official plan-specific IR and trailing fund / benchmark returns. AMFI monthly workbook supplies Direct / Regular full TER. The RBI current 10-year G-Sec proxy is automatically retrieved and displayed with source and date. The current NSE TRI endpoint is blocked from the serverless environment, so daily benchmark ratios are not populated until an approved TRI feed is available.
+
+
+## Automatic-source smoke tests
+
+On 13 November 2026, FundLens' AMFI Fund Performance route returned Parag Parikh Flexi Cap Fund (Direct) with the AMFI benchmark Nifty 500 TRI, AUM ₹1,56,539.94 crore, Riskometer Very High, and official Direct-plan IR values for 1Y / 3Y / 5Y / 10Y. The AMFI TER route returned Direct-plan full TER 0.68% with a TER date of 12 November 2026. These are source tests for one scheme, not proof of universal coverage across all AMCs.
