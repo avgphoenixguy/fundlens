@@ -1,5 +1,5 @@
 // Cached server-side proxy for NSE Indices' public historical TRI endpoint.
-// TRI is required for fund benchmarking because it includes reinvested dividends.
+// TRI includes reinvested dividends and is required for like-for-like fund benchmarking.
 // The endpoint is undocumented; fail closed and never substitute a price index.
 const ALLOWED = new Set([
   "NIFTY 50",
@@ -10,7 +10,7 @@ const ALLOWED = new Set([
   "NIFTY SMALLCAP 250"
 ]);
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
 function fromIso(iso) {
   const d = new Date(iso + "T00:00:00Z");
@@ -19,45 +19,11 @@ function fromIso(iso) {
 }
 function toIso(d) { return d.toISOString().slice(0,10); }
 function fmtDate(d) {
-  return String(d.getUTCDate()).padStart(2,"0") + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear();
+  // The ASP.NET TRI endpoint expects DD-MMM-YYYY (e.g. 13-Nov-2025),
+  // not the DD Mon YYYY format used in its returned observations.
+  return String(d.getUTCDate()).padStart(2,"0") + "-" + MONTHS[d.getUTCMonth()] + "-" + d.getUTCFullYear();
 }
 function addDays(d,n) { const x=new Date(d);x.setUTCDate(x.getUTCDate()+n);return x; }
-
-function cookieHeader(headers) {
-  let values = [];
-  if (typeof headers.getSetCookie === "function") {
-    values = headers.getSetCookie();
-  } else {
-    const single = headers.get("set-cookie");
-    if (single) values = [single];
-  }
-  return values
-    .map(value => String(value).split(";")[0].trim())
-    .filter(Boolean)
-    .join("; ");
-}
-
-async function bootstrapSession(host) {
-  // NSE/Akamai occasionally expects a browser-like visit to the report page
-  // before its ASP.NET data endpoint is called. Preserve cookies when issued.
-  // This is a lightweight session bootstrap, not a JavaScript challenge solver.
-  try {
-    const response = await fetch(host.referer, {
-      method: "GET",
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-IN,en;q=0.9"
-      },
-      signal: AbortSignal.timeout(4500),
-      redirect: "follow"
-    });
-    const cookies = cookieHeader(response.headers);
-    return { cookies, status: response.status, contentType: response.headers.get("content-type") || "" };
-  } catch (error) {
-    return { cookies: "", status: null, contentType: "", warning: error.message || "session bootstrap failed" };
-  }
-}
 
 function parseRows(raw) {
   let rows = raw && raw.d;
@@ -68,7 +34,7 @@ function parseRows(raw) {
     let date=null;
     if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(rawDate)) date=rawDate.slice(0,10);
     else {
-      const p=rawDate.split(/ +/);
+      const p=rawDate.split(/[- ]+/);
       if(p.length===3) {
         const month=MONTHS.findIndex(x=>x.toLowerCase()===p[1].slice(0,3).toLowerCase())+1;
         if(month>0)date=p[2]+"-"+String(month).padStart(2,"0")+"-"+p[0].padStart(2,"0");
@@ -89,42 +55,39 @@ async function fetchChunk(index,start,end) {
   const errors=[];
   for(const host of hosts){
     try{
-      const session = await bootstrapSession(host);
-      const headers = {
-        "Content-Type":"application/json; charset=UTF-8",
-        "Accept":"application/json, text/javascript, */*; q=0.01",
-        "Accept-Language":"en-IN,en;q=0.9",
-        "Origin":host.base,
-        "X-Requested-With":"XMLHttpRequest",
-        "Referer":host.referer,
-        "User-Agent":USER_AGENT
-      };
-      if (session.cookies) headers.Cookie = session.cookies;
-
+      // The public TRI endpoint has been observed working with a cold POST and no
+      // cookie jar. Avoid an unnecessary page request that can itself trigger bot
+      // protection; send the endpoint's documented browser-style headers directly.
       const response=await fetch(host.base+"/Backpage.aspx/getTotalReturnIndexString",{
         method:"POST",
-        headers,
+        headers:{
+          "Content-Type":"application/json; charset=UTF-8",
+          "Accept":"application/json, text/javascript, */*; q=0.01",
+          "Accept-Language":"en-IN,en;q=0.9",
+          "Origin":host.base,
+          "X-Requested-With":"XMLHttpRequest",
+          "Referer":host.referer,
+          "User-Agent":USER_AGENT
+        },
         body:JSON.stringify({cinfo}),
-        signal:AbortSignal.timeout(9000),
+        signal:AbortSignal.timeout(12000),
         redirect:"follow"
       });
       const contentType=response.headers.get("content-type")||"";
       const text=await response.text();
-      if(!response.ok)throw new Error("HTTP "+response.status+" ("+contentType+")");
+      if(!response.ok)throw new Error("HTTP "+response.status+" ("+contentType+") at "+response.url);
       let raw;
       try{raw=JSON.parse(text)}catch(e){
         const hint=text.trim().slice(0,110).replace(/\s+/g," ");
-        const challenge=/cloudflare|akamai|access denied|captcha|bot detection|request blocked/i.test(hint+" "+text.slice(0,1600));
+        const title=text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g," ").trim();
         throw new Error(
-          (challenge?"upstream bot protection returned HTML":"upstream returned HTML / non-JSON")+
-          " (HTTP "+response.status+", "+(contentType||"unknown content type")+
-          ", session "+(session.status===null?"unavailable":session.status)+
-          (session.cookies?"; cookie received":"; no cookie received")+
-          ", body: "+hint+")"
+          "NSE returned HTML instead of JSON (HTTP "+response.status+", "+
+          (contentType||"unknown content type")+", final URL "+response.url+
+          (title?", title: "+title:"")+", body: "+hint+")"
         );
       }
       const rows=parseRows(raw);
-      if(!rows.length)throw new Error("NSE returned no TRI rows for this index and date range");
+      if(!rows.length)throw new Error("NSE returned an empty TRI series for "+index+" from "+toIso(start)+" to "+toIso(end));
       return rows;
     }catch(error){errors.push(host.base+": "+(error.message||"request failed"))}
   }
@@ -157,7 +120,6 @@ module.exports=async function handler(req,res){
       cursor=addDays(chunkEnd,1);
     }
     const collected=[];
-    // Limit concurrency to protect the publisher's endpoint.
     for(let i=0;i<chunks.length;i+=2){
       const batch=chunks.slice(i,i+2);
       const batchRows=await Promise.all(batch.map(c=>fetchChunk(index,c.start,c.end)));
