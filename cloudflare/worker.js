@@ -53,7 +53,8 @@ function createResponseAdapter() {
 }
 
 async function dispatchApi(request, url) {
-  const pathname = url.pathname.replace(/\\/+$/, "") || "/";
+  let pathname = url.pathname || "/";
+  while (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
   const handler = API_ROUTES.get(pathname);
 
   if (pathname === "/api/health") {
