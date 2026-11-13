@@ -34,7 +34,7 @@ The prototype does not have a production data agreement, API key or backend conn
 - Automatic effective-dated mapping from scheme code to the current Tier 1 benchmark.
 - User portfolios from Angel One accounts or demat / CAS statements.
 
-Benchmark TRI files are imported manually and held only in browser memory. Dated curated data should not be described as live.
+Supported Nifty TRI is retrieved automatically through a cached serverless route. The current RBI G-Sec yield proxy is retrieved automatically and held constant across the selected sample. Dated curated AUM / TER / risk disclosures should not be described as live.
 
 ## Why these gaps remain
 
@@ -78,3 +78,8 @@ Public holdings data is available on a recurring disclosure basis. SEBI's Master
 This means automatic holdings ingestion is technically feasible through scheduled retrieval of public AMC / AMFI files, followed by format normalisation, ISIN mapping, validation and versioned storage. It is not equivalent to a clean real-time API: files and layouts still need robust ingestion and quality controls.
 
 That technical feasibility does not make a generic overlap module a FundLens opportunity. Angel One's NXT Fund & Stock Lab already advertises search by stock / scheme, holdings search, an overlap checker, pairwise matrix, chord / Venn views and common-holdings analysis. Its indexed page also says the MF snapshot has not yet been loaded and that refresh controls are protected. The capability exists as an Angel One-hosted product surface; whether it is fully populated and surfaced to every core-app user still needs first-party verification.
+
+
+## Automatic inputs and user uploads
+
+The live UI does not ask the investor to upload benchmark TRI or any other data file. Scheme NAV is requested from MFapi.in when a fund is loaded. Supported Nifty TRI is retrieved automatically through the FundLens /api/benchmark route. The RBI current 10-year G-Sec yield proxy is retrieved through /api/risk-free-rate. The selected annual yield is held constant across the historical NAV window and is visible with its source and as-of date. The curated scheme benchmark mapping is source-checked; other scheme mappings are not guessed. CRISIL benchmark families remain unsupported by automatic TRI retrieval.
