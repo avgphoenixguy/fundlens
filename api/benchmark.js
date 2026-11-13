@@ -14,6 +14,9 @@ const BENCHMARKS = {
   "NIFTY SMALLCAP 250": { slug: "nifty-smallcap-250", label: "Nifty Smallcap 250" }
 };
 const USER_AGENT = "Mozilla/5.0 (compatible; FundLensResearch/1.0; +https://fundlens-studio.netlify.app/)";
+let manifestCache = null;
+let manifestCacheUntil = 0;
+let manifestPending = null;
 
 function isoDate(value) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -102,7 +105,7 @@ async function getJson(url, timeoutMs) {
       "Accept": "application/json",
       "User-Agent": USER_AGENT
     },
-    signal: AbortSignal.timeout(timeoutMs || 7000),
+    signal: AbortSignal.timeout(timeoutMs || 5000),
     redirect: "follow"
   });
   const contentType = response.headers.get("content-type") || "";
@@ -112,6 +115,21 @@ async function getJson(url, timeoutMs) {
   try { body = JSON.parse(text); }
   catch (_) { throw new Error("Expected JSON from " + url + " but received " + (contentType || "an unknown content type")); }
   return body;
+}
+
+async function getTipsheetManifest() {
+  if (manifestCache && Date.now() < manifestCacheUntil) return manifestCache;
+  if (manifestPending) return manifestPending;
+  manifestPending = getJson(MANIFEST_URL, 4000).then(body => {
+    manifestCache = body;
+    // Tipsheet refreshes its manifest during trading evenings. Keep the warm
+    // function cache short so a newly published hashed dataset is picked up.
+    manifestCacheUntil = Date.now() + 60_000;
+    return body;
+  }).finally(() => {
+    manifestPending = null;
+  });
+  return manifestPending;
 }
 
 function collectSeries(node, path, inheritedMeta, out, depth) {
@@ -216,15 +234,19 @@ module.exports = async function handler(req, res) {
 
   try {
     const datasetKey = "indices/p/" + benchmark.slug;
-    const manifest = await getJson(MANIFEST_URL, 6500);
+    const manifest = await getTipsheetManifest();
     const resource = findManifestResource(manifest, datasetKey);
     if (!resource) {
       const topKeys = manifest && typeof manifest === "object" ? Object.keys(manifest).slice(0, 24) : [];
       throw new Error("Tipsheet manifest did not contain " + datasetKey + ". Manifest fields: " + topKeys.join(", "));
     }
     const datasetUrl = safeTipsheetUrl(resource);
-    const dataset = await getJson(datasetUrl, 6500);
+    const dataset = await getJson(datasetUrl, 5000);
     const selected = pickTotalReturnSeries(dataset);
+    const declaredResolution = String(selected.resolution || dataset.resolution || "").toLowerCase();
+    if (declaredResolution && declaredResolution !== "weekly") {
+      throw new Error("Tipsheet declared this series as " + declaredResolution + ", not weekly. Benchmark calculations were withheld.");
+    }
 
     const data = [];
     for (let i = 0; i < selected.dates.length; i++) {
