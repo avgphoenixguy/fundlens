@@ -469,7 +469,7 @@ function renderResearchMetrics(){
  setMetric('metricAlpha',primary?(ready?fmtPct(m.alpha):'Unavailable'):'Not primary',primary?'CAPM daily regression intercept, annualised. Requires matched Tier 1 benchmark TRI.':'Not a primary evaluation measure for this category.');
  setMetric('metricBeta',primary?(ready?fmtNum(m.beta,2):'Unavailable'):'Not primary',primary?'Matched daily NAV and TRI returns.':'Use category-specific risk measures instead.');
  const periodKey=({'12':'1Y','36':'3Y','60':'5Y','120':'10Y'})[$('analysisPeriod')?.value]||'';
- const officialIR=primary?Number(state.amfiPerformance?.informationRatio?.[periodKey]):NaN;
+ const officialRaw=state.amfiPerformance?.informationRatio?.[periodKey];const officialIR=primary&&officialRaw!==null&&officialRaw!==undefined&&officialRaw!==''?Number(officialRaw):NaN;
  const irIsOfficial=Number.isFinite(officialIR);
  const irValue=irIsOfficial?fmtNum(officialIR,3):(ready&&primary?fmtNum(m.ir,2):'Unavailable');
  const irNote=irIsOfficial?'Official AMFI-disclosed '+periodKey+' IR · '+(state.amfiPerformance?.plan||planForScheme(getName()))+' plan · AMFI report '+(state.amfiPerformance?.reportDate||'date not supplied')+'.':'FundLens annualised daily research estimate (√252), not AMC-reported IR. Requires exact-date-matched Tier 1 TRI.';
@@ -493,7 +493,7 @@ function renderDisclosureLens(){
  const benchmark=(live&&live.benchmark)||ref.benchmark||'Not supplied';
  const cost=ref.cost?ref.cost+' · '+ref.costLabel+' · '+ref.costDate:'Not available from the current AMFI performance feed';
  const officialIr=live?.informationRatio||{};
- const irText=['1Y','3Y','5Y','10Y'].map(k=>Number.isFinite(Number(officialIr[k]))?k+' '+Number(officialIr[k]).toFixed(3):null).filter(Boolean).join(' · ')||'Not supplied';
+ const irText=['1Y','3Y','5Y','10Y'].map(k=>officialIr[k]!==null&&officialIr[k]!==undefined&&officialIr[k]!==''&&Number.isFinite(Number(officialIr[k]))?k+' '+Number(officialIr[k]).toFixed(3):null).filter(Boolean).join(' · ')||'Not supplied';
  const source=live?'AMFI Fund Performance API':'Curated AMC snapshot';
  const sourceLink=live?'https://www.amfiindia.com/polling/amfi/fund-performance':(ref.source||'#');
  const sourceLabel=live?'AMFI current scheme disclosure':(ref.sourceLabel||'AMC source');
