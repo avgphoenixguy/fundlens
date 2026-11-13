@@ -4,7 +4,7 @@
 
 Live prototype: <https://fundlens-studio.vercel.app/>
 
-FundLens is a research workspace for self-directed Indian mutual fund investors. It addresses a specific product opportunity: moving beyond a single trailing-return figure to understand consistency, risk-adjusted performance, benchmark-relative outcomes and portfolio duplication.
+FundLens is a research workspace for self-directed Indian mutual fund investors. It addresses a specific product opportunity: moving beyond a single trailing-return figure to understand consistency, risk-adjusted performance and benchmark-relative outcomes.
 
 It is not a recommendation engine and does not provide investment advice.
 
@@ -47,9 +47,6 @@ For Nifty family indices, NSE Indices publishes downloadable historical Total Re
 ### Fund disclosures
 A small set of selected-scheme AUM, cost, riskometer, benchmark and AMC-reported ratio examples is included as dated reference data. These values are **not refreshed by the NAV API**. They are not comprehensive or synchronised to one common reporting date. BER is not relabelled as TER. The source register and caveats are in `docs/REAL_FUND_DATA_SOURCES.md`.
 
-### Holdings
-Portfolio overlap depends on the latest monthly holdings disclosure. SEBI's mutual fund disclosure framework requires scheme portfolios, including ISINs, to be made available in downloadable format. Users download the relevant AMC disclosures and combine the required rows into the provided FundLens template. The application does not currently scrape or centrally store every AMC's holdings file.
-
 ## Key calculations
 
 - **CAGR:** NAV / TRI growth over actual elapsed calendar time.
@@ -59,11 +56,9 @@ Portfolio overlap depends on the latest monthly holdings disclosure. SEBI's mutu
 - **Beta:** sample covariance of fund and benchmark daily returns divided by benchmark return variance.
 - **Alpha:** annualised daily CAPM intercept using matched fund / benchmark returns and the selected risk-free assumption.
 - **Tracking error:** sample standard deviation of daily active returns multiplied by √252.
-- **Information Ratio:** daily arithmetic active return divided by the sample standard deviation of daily active returns, using the Tier 1 benchmark. The implementation does not apply an extra √252 multiplier to this daily estimate, in line with the daily return formulation described by SEBI.
-- **Pairwise stock overlap:** sum, across securities present in both funds, of the lower of their two reported portfolio weights.
-- **Blended stock / sector exposure:** sum of each fund's investor-entered allocation multiplied by its disclosed holding / sector weight, divided by the total investor allocation.
+- **Information Ratio:** daily arithmetic active return divided by the sample standard deviation of daily active returns, using the Tier 1 benchmark. FundLens displays an annualised research estimate using √252; it is not a substitute for the official AMC / AMFI disclosed IR.
 
-Full formulas, sample rules and limitations: `docs/ADVANCED_METRICS_METHODOLOGY.md`, `docs/ROLLING_RETURN_METHODOLOGY.md`, `docs/CATEGORY_AWARE_RESEARCH.md`, and `docs/PORTFOLIO_OVERLAP_METHODOLOGY.md`.
+Full formulas, sample rules and limitations: `docs/ADVANCED_METRICS_METHODOLOGY.md`, `docs/ROLLING_RETURN_METHODOLOGY.md`, `docs/CATEGORY_AWARE_RESEARCH.md` and `docs/PROTOTYPE_SCOPE_AND_LIMITATIONS.md`.
 
 ## Running locally
 
@@ -78,7 +73,6 @@ Open <http://localhost:3000>.
 ## Important limitations
 
 - Benchmark TRI import is currently manual and session-only. No production-grade benchmark data licence / API is connected.
-- Scheme holdings import is manual and session-only. The quality and recency of overlap results depend on the AMC disclosure supplied by the user.
 - Dated scheme disclosures cover selected examples only. They are not comprehensive live AUM / TER / holdings integrations.
 - Category classification is heuristic and needs confirmation against the latest SID / factsheet.
 - NAV-based risk and return calculations depend on the availability and quality of NAV history. A NAV series alone cannot provide benchmark-relative metrics.
