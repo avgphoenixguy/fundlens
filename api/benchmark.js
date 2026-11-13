@@ -13,7 +13,7 @@ const BENCHMARKS = {
   "NIFTY MIDCAP 150": { slug: "nifty-midcap-150", label: "Nifty Midcap 150" },
   "NIFTY SMALLCAP 250": { slug: "nifty-smallcap-250", label: "Nifty Smallcap 250" }
 };
-const USER_AGENT = "Mozilla/5.0 (compatible; FundLensResearch/1.0; +https://fundlens-studio.netlify.app/)";
+const USER_AGENT = "Mozilla/5.0 (compatible; FundLensResearch/1.0; +https://fundlens.krishnalahoti2004.workers.dev/)";
 let manifestCache = null;
 let manifestCacheUntil = 0;
 let manifestPending = null;
