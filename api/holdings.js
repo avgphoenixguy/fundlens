@@ -62,7 +62,8 @@ function tokenScore(a, b) {
   return hits / Math.max(A.size, B.size);
 }
 function parseDisclosureDate(s) {
-  const v = String(s || "");
+  let v = String(s || "");
+  try { v = decodeURIComponent(v); } catch (_) {}
   let m = v.match(/(\d{1,2})[ _-]+([A-Za-z]{3,9})[ _-]+(20\d{2})/i);
   if (!m) m = v.match(/([A-Za-z]{3,9})[ _-]+(\d{1,2})[,_ -]+(20\d{2})/i);
   if (!m) return null;
@@ -133,7 +134,12 @@ function findPpfasDownload(items, alias) {
 }
 function findHdfcDownload(items, schemeName) {
   const scored = items.map(x => {
-    const label = String(x.label || "").replace(/\\b(?:monthly|fortnightly)\\b/gi, " ").replace(/\\b\\d{1,2}\\s+[A-Za-z]+\\s+20\\d{2}\\b/g, " ").replace(/\\.(?:xlsx|xlsm|xls|csv)\\b/gi, " ");
+    let label = String(x.label || "");
+    try { label = decodeURIComponent(label); } catch (_) {}
+    label = label.replace(/\b(?:monthly|fortnightly)\b/gi, " ")
+      .replace(/\b\d{1,2}\s+[A-Za-z]+\s+20\d{2}\b/g, " ")
+      .replace(/\.(?:xlsx|xlsm|xls|csv)\b/gi, " ")
+      .replace(/https?:\/\//gi, " ");
     return { ...x, score: tokenScore(schemeName, label) };
   }).filter(x => x.score >= 0.8)
     .sort((a, b) => (b.asOf || "").localeCompare(a.asOf || "") || b.score - a.score);
@@ -330,16 +336,6 @@ async function resolvePortfolio(scheme, debug = false) {
   const html = await fetchText(source.page, source.page);
   const links = collectDownloads(html, source.page, source.allowedHosts);
   let chosen = null;
-  if (debug && source === AMC_SOURCES.hdfc) {
-    return {
-      debug: true,
-      schemeName: scheme.name,
-      fundHouse: scheme.fundHouse,
-      sourcePage: source.page,
-      linkCount: links.length,
-      workbookLinks: links.filter(x => /hdfc/i.test(x.label + " " + x.url)).slice(0, 120)
-    };
-  }
   if (source === AMC_SOURCES.ppfas) {
     const alias = source.alias(scheme.name);
     if (!alias) throw Object.assign(new Error("This PPFAS scheme does not have a verified holdings-file mapping."), { status: 422 });
@@ -347,6 +343,7 @@ async function resolvePortfolio(scheme, debug = false) {
   } else if (source === AMC_SOURCES.hdfc) {
     chosen = findHdfcDownload(links, scheme.name);
   }
+  if (debug && source === AMC_SOURCES.hdfc) return { debug: true, schemeName: scheme.name, fundHouse: scheme.fundHouse, linkCount: links.length, selected: chosen };
   if (!chosen) throw Object.assign(new Error("No matching public monthly portfolio workbook was found for this scheme on the AMC disclosure page."), { status: 404, sourceUrl: source.page });
   const fileUrl = chosen.url;
   const fileHost = new URL(fileUrl).hostname.toLowerCase();
