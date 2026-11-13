@@ -32,7 +32,6 @@ A methodology-first workspace that exposes:
 - **Rolling lab:** configurable 1–120 month holding windows, daily / weekly / monthly start-date sampling, absolute or annualised returns, rolling outcome chart and histogram.
 - **Compare funds:** compare up to three schemes with NAV-derived return / risk measures. The comparison is descriptive, not a universal ranking.
 - **Risk profile:** annualised volatility, maximum drawdown, positive-day share and daily-return distribution.
-- **Portfolio overlap:** import one combined holdings CSV covering multiple schemes. Set investor allocation amounts, inspect pairwise stock overlap, repeated positions, blended stock weights and sector concentration.
 - **Source and methodology disclosures:** explain formulas, date matching, data limitations and source requirements.
 
 ## Data sources and integrations
@@ -87,3 +86,7 @@ Open <http://localhost:3000>.
 - Overlapping rolling windows are not independent observations. A positive-window share is a historical sample statistic, not a forecast or probability of future profit.
 
 FundLens is a product prototype for research and discussion, not investment advice. Verify current information with AMC, AMFI, SEBI and index-provider disclosures before making investment decisions.
+
+## Product-scope decision: portfolio overlap
+
+FundLens does not currently ship a portfolio-overlap module. Angel One already has an Angel One-hosted NXT Fund & Stock Lab page that lists an Overlap Checker, pairwise overlap matrix, common holdings, stock-to-scheme holdings search and holdings-based visualisations. The page is separate from the documented primary Mutual Funds journey, and its indexed state says the MF data snapshot needs an upstream refresh. We therefore do not pitch stock overlap as a novel FundLens feature. See `docs/COMPETITIVE_RESEARCH_PORTFOLIO_OVERLAP.md` for the distinction between the mainstream app documentation and the NXT research surface.
