@@ -295,10 +295,10 @@
     <div class="note-box">Allocation weights below are only a hypothetical weighting across the funds you selected. They do not represent your actual Angel One holdings or account portfolio. Equal allocation is the default.</div>
    </div>
    <div id="overlapAnalysis" class="panel-box">
-    <div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Overlap is calculated only from matched security ISINs in validated listed-equity rows.</p></div><span class="tag green">ISIN-MATCHED</span></div>
+    <div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Overlap is calculated only from matched security ISINs in validated listed-equity and equity-related rows.</p></div><span class="tag green">ISIN-MATCHED</span></div>
     <div class="empty">Select at least two schemes with supported, validated equity holdings to calculate overlap.</div>
    </div>
-   <div class="warning-box">Coverage is intentionally limited to verified public AMC file adapters. The first adapter supports PPFAS scheme-level portfolio workbooks. Unsupported AMCs, stale files, incomplete workbooks and missing ISINs are reported, not silently substituted. Debt, cash, derivatives and unclassified instruments are not included in stock overlap. This tool is research support, not investment advice.</div>
+   <div class="warning-box">Coverage is intentionally limited to verified public AMC file adapters. The verified adapters currently support PPFAS and HDFC Mutual Fund monthly scheme workbooks. Unsupported AMCs, stale files, incomplete workbooks and missing ISINs are reported, not silently substituted. Debt, cash, derivatives and unclassified instruments are not included in stock overlap. This tool is research support, not investment advice.</div>
   </section>
 
   <div class="footer">FundLens is a product prototype. Mutual fund investments are subject to market risks. Verify current scheme details with the relevant AMC. This tool is not investment advice.</div>
@@ -715,7 +715,7 @@ function renderPortfolioSelected(){
   const meta=f.data?escapeHtml(f.data.fundHouse+' · '+(f.data.asOf||'Disclosure date unavailable')+' · '+f.data.totalEquityHoldings+' ISIN-matched equity holdings'):escapeHtml(f.error||'Public holdings retrieval in progress');
   const age=f.data?.ageDays;
   const freshness=age===null||age===undefined?'':(age+' days old');
-  return '<div class="overlap-fund"><div><h4>'+escapeHtml(f.name)+'</h4><p>'+meta+(freshness?' · '+freshness:'')+'</p>'+(f.data?'<p>Equity weight found: '+fmtNum(f.data.equityCoveragePct,2)+'% of scheme NAV · '+escapeHtml(f.data.source)+'</p>':'')+'</div><div><label style="display:block;font-size:9px;font-weight:800;color:#718096;margin-bottom:4px">ALLOCATION %</label><input type="number" min="0" max="100" step="0.1" value="'+Number(f.allocationPct||0).toFixed(1)+'" data-portfolio-allocation="'+f.code+'" aria-label="Hypothetical allocation percentage for '+escapeHtml(f.name)+'"></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">'+overlapStatusBadge(f)+'<button class="icon-btn" data-portfolio-remove="'+f.code+'" type="button">Remove</button></div></div>';
+  return '<div class="overlap-fund"><div><h4>'+escapeHtml(f.name)+'</h4><p>'+meta+(freshness?' · '+freshness:'')+'</p>'+(f.data?'<p>Listed-equity / equity-related weight found: '+fmtNum(f.data.equityCoveragePct,2)+'% of scheme NAV · '+escapeHtml(f.data.source)+'</p>':'')+'</div><div><label style="display:block;font-size:9px;font-weight:800;color:#718096;margin-bottom:4px">ALLOCATION %</label><input type="number" min="0" max="100" step="0.1" value="'+Number(f.allocationPct||0).toFixed(1)+'" data-portfolio-allocation="'+f.code+'" aria-label="Hypothetical allocation percentage for '+escapeHtml(f.name)+'"></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">'+overlapStatusBadge(f)+'<button class="icon-btn" data-portfolio-remove="'+f.code+'" type="button">Remove</button></div></div>';
  }).join('')+'</div>';
  root.querySelectorAll('[data-portfolio-remove]').forEach(b=>b.addEventListener('click',()=>removePortfolioFund(Number(b.dataset.portfolioRemove))));
  root.querySelectorAll('[data-portfolio-allocation]').forEach(input=>input.addEventListener('change',()=>{
@@ -749,12 +749,12 @@ function removePortfolioFund(code){
  }
  renderPortfolioPage();
 }
-async function fetchPortfolioHoldings(code){
+async function fetchPortfolioHoldings(code,forceRefresh=false){
  const fund=state.portfolioFunds.find(f=>f.code===Number(code));
  if(!fund)return;
  fund.status='loading';fund.error=null;renderPortfolioPage();
  try{
-  const res=await fetch('/api/holdings?schemeCode='+encodeURIComponent(code),{headers:{'Accept':'application/json'}});
+  const res=await fetch('/api/holdings?schemeCode='+encodeURIComponent(code)+(forceRefresh?'&refresh=1':''),{headers:{'Accept':'application/json'},cache:forceRefresh?'no-store':'default'});
   const body=await res.json();
   if(!res.ok)throw new Error(body.error||'Holdings provider returned HTTP '+res.status);
   if(Number(body.schemeCode)!==Number(code)||!Array.isArray(body.holdings)||!body.holdings.length)throw new Error('The disclosure response failed scheme or holdings validation.');
@@ -836,7 +836,7 @@ function renderPortfolioAnalysis(){
  const sectorRows=sectors.slice(0,8).map(x=>'<tr><td>'+escapeHtml(x[0])+'</td><td>'+fmtNum(x[1],3)+'%</td></tr>').join('');
  const overlapTop=pairs.length?Math.max(...pairs.map(p=>p.overlap)):0;
  const commonAcross=stocks.filter(x=>x.funds.length>=2).length;
- root.innerHTML='<div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Published listed-equity positions, weighted by your hypothetical fund allocations. Snapshot dates: '+earliest+' to '+latest+'.</p></div><span class="overlap-badge good">VALIDATED DATA</span></div>'+
+ root.innerHTML='<div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Published listed-equity and equity-related positions, weighted by your hypothetical fund allocations. Snapshot dates: '+earliest+' to '+latest+'.</p></div><span class="overlap-badge good">VALIDATED DATA</span></div>'+
   (errors.length?'<div class="warning-box">'+errors.length+' selected scheme(s) could not be included because validated public holdings were unavailable. Results below include only the '+loaded.length+' successfully validated scheme(s).</div>':'')+
   (stale.length?'<div class="warning-box">At least one disclosure is older than 45 days. Results are historical snapshots, not current holdings. Review each source date before interpreting overlap.</div>':'')+
   '<div class="overlap-kpis"><div class="overlap-kpi"><span>Highest pairwise overlap</span><strong>'+fmtNum(overlapTop,2)+'%</strong><small>Conservative min-weight method</small></div><div class="overlap-kpi"><span>Common securities</span><strong>'+commonAcross+'</strong><small>Held by at least two selected schemes</small></div><div class="overlap-kpi"><span>Selected schemes</span><strong>'+loaded.length+'</strong><small>With validated holdings files</small></div><div class="overlap-kpi"><span>Unique securities</span><strong>'+stocks.length+'</strong><small>ISIN-matched across selected funds</small></div></div>'+
@@ -862,7 +862,7 @@ $('overlapSearchClear').addEventListener('click',()=>{$('overlapSearch').value='
 $('overlapRefresh').addEventListener('click',()=>{
  const codes=state.portfolioFunds.map(f=>f.code);
  if(!codes.length){toast('Add schemes first.');return}
- codes.forEach(fetchPortfolioHoldings);
+ codes.forEach(code=>fetchPortfolioHoldings(code,true));
 });
 
 async function searchSchemes(q){
