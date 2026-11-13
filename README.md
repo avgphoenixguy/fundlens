@@ -2,7 +2,7 @@
 
 **Mutual Fund Research & Comparison Studio**
 
-Live prototype: [https://fundlens-studio.netlify.app/](https://fundlens-studio.netlify.app/)
+Prototype URL: [https://fundlens-studio.netlify.app/](https://fundlens-studio.netlify.app/)
 
 FundLens is a research workspace for self-directed Indian mutual fund investors. It explores a product opportunity: helping investors move beyond a single trailing-return figure to understand performance consistency, risk-adjusted outcomes, benchmark context and the assumptions behind each metric.
 
