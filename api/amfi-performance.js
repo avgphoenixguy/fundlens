@@ -117,6 +117,9 @@ module.exports=async function handler(req,res){
     "5Y":num(plan==="direct"?match.ir5YrDirect:match.ir5YrRegular),
     "10Y":num(plan==="direct"?match.ir10YrDirect:match.ir10YrRegular)
    }
+,
+   availableFields:Object.keys(match),
+   additionalPublishedMetrics:Object.fromEntries(Object.entries(match).filter(([key,value])=>/alpha|beta|sharpe|sortino|standarddeviation|volatility|trackingerror|informationratio|ir\d/i.test(key)).map(([key,value])=>[key,value]))
   });
  }catch(error){
   return res.status(502).json({error:"Automatic AMFI Fund Performance retrieval failed: "+(error.message||"upstream error"),sourceUrl:"https://www.amfiindia.com/polling/amfi/fund-performance"});
