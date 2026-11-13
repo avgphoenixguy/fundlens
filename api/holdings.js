@@ -116,15 +116,29 @@ async function fetchText(url, referer) {
   if (!r.ok) throw new Error("AMC disclosure page returned HTTP " + r.status);
   return await r.text();
 }
-async function fetchBinary(url, referer) {
-  const r = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; FundLensResearch/1.0)", "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*", "Referer": referer },
-    signal: AbortSignal.timeout(20000)
-  });
-  if (!r.ok) throw new Error("Portfolio workbook returned HTTP " + r.status);
-  const bytes = Buffer.from(await r.arrayBuffer());
-  if (bytes.length < 1000 || bytes.length > 12 * 1024 * 1024) throw new Error("Portfolio workbook size is outside the accepted range");
-  return bytes;
+async function fetchBinary(url, referer, allowedHosts) {
+  let current = new URL(url);
+  for (let hop = 0; hop <= 3; hop++) {
+    if (current.protocol !== "https:" || !allowedHosts.includes(current.hostname.toLowerCase())) {
+      throw new Error("Portfolio workbook redirected outside the approved AMC hosts");
+    }
+    const r = await fetch(current.href, {
+      redirect: "manual",
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; FundLensResearch/1.0)", "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*", "Referer": referer },
+      signal: AbortSignal.timeout(20000)
+    });
+    if ([301, 302, 303, 307, 308].includes(r.status)) {
+      const location = r.headers.get("location");
+      if (!location || hop === 3) throw new Error("Portfolio workbook redirect chain is invalid or too long");
+      current = new URL(location, current);
+      continue;
+    }
+    if (!r.ok) throw new Error("Portfolio workbook returned HTTP " + r.status);
+    const bytes = Buffer.from(await r.arrayBuffer());
+    if (bytes.length < 1000 || bytes.length > 12 * 1024 * 1024) throw new Error("Portfolio workbook size is outside the accepted range");
+    return bytes;
+  }
+  throw new Error("Portfolio workbook redirect chain could not be resolved");
 }
 function findPpfasDownload(items, alias) {
   const candidates = items.filter(x => (x.url + " " + x.label).toUpperCase().includes(alias));
@@ -333,7 +347,7 @@ async function getSchemeMeta(code) {
   if (!name || !fundHouse) throw new Error("Scheme metadata did not identify a scheme and AMC");
   return { name, fundHouse, category: String(meta.scheme_category || "") };
 }
-async function resolvePortfolio(scheme, debug = false) {
+async function resolvePortfolio(scheme) {
   const source = Object.values(AMC_SOURCES).find(x => x.match.test(scheme.fundHouse));
   if (!source) throw Object.assign(new Error("Automatic public holdings retrieval is not yet supported for " + scheme.fundHouse + ". No substitute or estimated holdings were used."), { status: 422, fundHouse: scheme.fundHouse });
   if (/arbitrage|equity savings/i.test(scheme.name)) throw Object.assign(new Error("This scheme uses arbitrage or hedged equity strategies. Gross stock holdings do not equal net market exposure, so FundLens withholds the overlap calculation."), { status: 422, fundHouse: scheme.fundHouse });
@@ -351,25 +365,9 @@ async function resolvePortfolio(scheme, debug = false) {
   const fileUrl = chosen.url;
   const fileHost = new URL(fileUrl).hostname.toLowerCase();
   if (!source.allowedHosts.includes(fileHost)) throw new Error("The discovered workbook host is not in the AMC allowlist");
-  const buf = await fetchBinary(fileUrl, source.page);
+  const buf = await fetchBinary(fileUrl, source.page, source.allowedHosts);
   if (buf.readUInt32LE(0) !== 0x04034b50) throw new Error("The AMC file is not an XLSX workbook; it was not parsed or approximated");
   const asOf = chosen.asOf || parseDisclosureDate(fileUrl);
-  if (debug && source === AMC_SOURCES.hdfc) {
-    const rows = parseXlsxRows(buf);
-    const candidates = [];
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const vals = row.map(c => String(c?.value ?? ""));
-      const isin = cellValue(row, 1).toUpperCase().replace(/\\s+/g, "");
-      const name = cellValue(row, 3);
-      const industry = cellValue(row, 4);
-      const rawWeight = cellValue(row, 7);
-      if (/^[A-Z]{2}[A-Z0-9]{10}$/.test(isin) && name && rawWeight) {
-        candidates.push({ row: i + 1, isin, name, industry, rawWeight });
-      }
-    }
-    return { debug: true, schemeName: scheme.name, asOf, fileUrl, totalRows: rows.length, isinRows: candidates.length, candidates };
-  }
   const parsed = parsePortfolio(buf, source === AMC_SOURCES.ppfas);
   const ageDays = asOf ? Math.floor((Date.now() - new Date(asOf + "T00:00:00Z").getTime()) / 86400000) : null;
   return {
@@ -391,7 +389,8 @@ async function resolvePortfolio(scheme, debug = false) {
   };
 }
 module.exports = async function handler(req, res) {
-  res.setHeader("Cache-Control", "public, s-maxage=21600, stale-while-revalidate=86400");
+  const forceRefresh = req.query.refresh === "1";
+  res.setHeader("Cache-Control", forceRefresh ? "no-store, max-age=0" : "public, s-maxage=21600, stale-while-revalidate=86400");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -400,7 +399,7 @@ module.exports = async function handler(req, res) {
   if (!Number.isSafeInteger(code) || code <= 0) return res.status(400).json({ error: "A valid MFAPI schemeCode is required." });
   try {
     const scheme = await getSchemeMeta(code);
-    const result = await resolvePortfolio({ ...scheme, schemeCode: code }, req.query.debug === "1");
+    const result = await resolvePortfolio({ ...scheme, schemeCode: code });
     return res.status(200).json(result);
   } catch (error) {
     const status = Number(error.status) || 502;
