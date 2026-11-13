@@ -1,6 +1,6 @@
 # FundLens data import guide
 
-FundLens is currently a static browser prototype. Imported CSVs are parsed in the browser and are not sent to a FundLens backend. They remain available only for the current browser session.
+FundLens is currently a static browser prototype. Benchmark TRI CSVs are parsed in the browser and are not sent to a FundLens backend. They remain available only for the current browser session.
 
 ## 1. Daily benchmark TRI CSV
 
@@ -21,7 +21,7 @@ The application does not automatically download NSE TRI files. Automated access 
 
 The prototype contains a small curated set of dated AMC reference disclosures for selected schemes. These are not imported through this page and are not refreshed by the NAV API. See `REAL_FUND_DATA_SOURCES.md` for source URLs, snapshot dates and plan / option caveats.
 
-## 4. Data handling and security
+## 3. Data handling and security
 
 - Benchmark TRI CSV processing runs in the browser.
 - The benchmark TRI import is not uploaded to a server by this prototype.
