@@ -18,7 +18,7 @@ const USER_AGENT = "Mozilla/5.0 (compatible; FundLensResearch/1.0; +https://fund
 function isoDate(value) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   const s = String(value || "").trim();
-  const m = s.match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/);
+  const m = s.match(/^(\\d{4})[-\/](\\d{1,2})[-\/](\\d{1,2})/);
   if (m) return m[1] + "-" + String(m[2]).padStart(2, "0") + "-" + String(m[3]).padStart(2, "0");
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
