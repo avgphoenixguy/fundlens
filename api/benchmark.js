@@ -95,12 +95,12 @@ function findManifestResource(manifest, datasetKey) {
 function safeTipsheetUrl(path) {
   const raw = String(path || "").trim();
   let url;
-  if (/^https?:\\/\\//i.test(raw)) {
+  if (/^https?:\/\//i.test(raw)) {
     url = new URL(raw);
   } else {
     // Tipsheet manifest file addresses are relative to /data/v1/, whether
     // the manifest spells them as "indices/..." or "/indices/...".
-    const relativePath = raw.replace(/^\\/+/, "");
+    const relativePath = raw.replace(/^\/+/, "");
     const dataPath = relativePath.startsWith("data/v1/")
       ? "/" + relativePath
       : "/data/v1/" + relativePath;
