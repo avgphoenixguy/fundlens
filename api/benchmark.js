@@ -24,10 +24,15 @@ function isoDate(value) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 function normaliseKey(value) {
-  return String(value || "").toLowerCase().replace(/\\\\/g, "/").replace(/^\\/+|\\/+$/g, "").replace(/\\.json$/i, "");
+  let key = String(value || "").toLowerCase().replaceAll("\\", "/");
+  while (key.startsWith("/")) key = key.slice(1);
+  while (key.endsWith("/")) key = key.slice(0, -1);
+  return key.endsWith(".json") ? key.slice(0, -5) : key;
 }
 function isJsonPath(value) {
-  return typeof value === "string" && (/\\.json(?:\\?|$)/i.test(value) || /\\.json$/i.test(value));
+  if (typeof value !== "string") return false;
+  const clean = value.split("?")[0].toLowerCase();
+  return clean.endsWith(".json");
 }
 function resourceFrom(value) {
   if (isJsonPath(value)) return value;
