@@ -358,7 +358,7 @@ body.studio-open .app-shell{display:block}
      <div class="card-head"><div><div class="card-title">Current selection</div><div class="card-sub">Scheme metadata from the NAV history provider.</div></div><span class="tag" id="selectedCode">SCHEME —</span></div>
      <h2 class="fund-title" id="universeFundName">Select a scheme</h2><div class="fund-meta" id="universeFundMeta">Choose a search result to inspect its NAV history.</div>
      <div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:17px"><div class="kpi"><div class="label">Available observations</div><div class="value" id="obsCount">—</div><div class="note">Daily NAV rows received</div></div><div class="kpi"><div class="label">History begins</div><div class="value" style="font-size:16px" id="historyStart">—</div><div class="note">Earliest available NAV</div></div></div>
-The searchable directory includes scheme variants and plan/option combinations. For a like-for-like return comparison, use the same plan and option. The comparison workspace also supports broader descriptive comparisons, with each scheme’s plan and disclosures shown separately.
+     <div class="note-box">The searchable directory includes scheme variants and plan/option combinations. For a like-for-like return comparison, use the same plan and option. The comparison workspace also supports broader descriptive comparisons, with each scheme’s plan and disclosures shown separately. Scheme metadata may not include TER, AUM or benchmark details.</div>
      <button class="btn primary" style="margin-top:13px" id="loadSelected">Open selected scheme</button>
     </div>
    </div>
@@ -455,7 +455,7 @@ The searchable directory includes scheme variants and plan/option combinations. 
     <div class="search-results" id="overlapSearchResults"><div class="empty">No search results yet.</div></div>
    </div>
    <div class="panel-box">
-FundLens fetches the latest matching public AMC workbook it can validate. Combined calculations require every selected snapshot to be no more than 45 days old.
+    <div class="panel-heading"><div><h3>2. Automatically retrieved disclosures</h3><p>FundLens fetches the latest matching public AMC workbook it can validate. Combined calculations require every selected snapshot to be no more than 45 days old.</p></div><button class="btn" id="overlapRefresh" type="button">Refresh selected</button></div>
     <div id="overlapSelected"><div class="empty">Add schemes above to retrieve their public portfolio disclosures.</div></div>
     <div class="note-box">Allocation weights below are only a hypothetical weighting across the funds you selected. They do not represent your actual Angel One holdings or account portfolio. Equal allocation is the default.</div>
    </div>
@@ -1059,7 +1059,6 @@ function sectorDonutMarkup(sectors){
  return '<div class="donut-layout"><svg class="sector-donut" viewBox="0 0 144 144" role="img" aria-label="Sector exposure donut chart including an undisclosed-sector bucket"><circle cx="72" cy="72" r="'+radius+'" fill="none" stroke="#edf1f4" stroke-width="19"/>'+slices.map(x=>x.circle).join('')+'<text x="72" y="67" text-anchor="middle" font-size="10" font-weight="800" fill="#748295">PARSED</text><text x="72" y="81" text-anchor="middle" font-size="11" font-weight="850" fill="#26394e">EQUITY</text></svg><ul class="sector-legend">'+legend+'</ul></div><div class="metric-caption">Donut slices show each reported sector plus the explicit “Sector not disclosed” bucket as a share of parsed listed-equity weights. The smaller NAV figures show each bucket’s allocation-weighted contribution to the hypothetical portfolio. Debt, cash, derivatives and other excluded non-equity rows are not shown. This is not the full scheme portfolio’s sector allocation.</div>';
 }
 function renderPortfolioAnalysis(){
-function renderPortfolioAnalysis(){
  const root=$('overlapAnalysis');
  const loaded=state.portfolioFunds.filter(f=>f.status==='ready'&&f.data);
  const errors=state.portfolioFunds.filter(f=>f.status==='error');
@@ -1085,7 +1084,6 @@ function renderPortfolioAnalysis(){
   root.innerHTML='<div class="panel-heading"><div><h3>3. Combined portfolio analysis</h3><p>Holdings must refer to comparable reporting periods.</p></div></div><div class="warning-box">Analysis withheld: the validated portfolio snapshots span '+dateGap+' days ('+earliest+' to '+latest+'). FundLens requires all selected holdings dates to be within 45 days before comparing weights. Refresh later or select schemes with aligned disclosures.</div>';
   return;
  }
- const pairs=portfolioPairs(loaded);
  const pairs=portfolioPairs(loaded);
  const allocations=portfolioAllocations(loaded);
  const allocNote=allocations?'Hypothetical scheme allocations normalized to 100%.':'Allocation weights must sum to more than zero.';
@@ -1116,7 +1114,7 @@ function renderPortfolioAnalysis(){
   (errors.length?'<div class="warning-box">'+errors.length+' selected scheme(s) could not be included because validated public holdings were unavailable. Results below include only the '+loaded.length+' successfully validated scheme(s).</div>':'')+
   (stale.length?'<div class="warning-box">At least one disclosure is older than 45 days. Results are historical snapshots, not current holdings. Review each source date before interpreting overlap.</div>':'')+
   '<div class="overlap-kpis"><div class="overlap-kpi"><span>Highest pairwise overlap</span><strong>'+fmtNum(overlapTop,2)+'%</strong><small>Conservative min-weight method</small></div><div class="overlap-kpi"><span>Common securities</span><strong>'+commonAcross+'</strong><small>Held by at least two selected schemes</small></div><div class="overlap-kpi"><span>Selected schemes</span><strong>'+loaded.length+'</strong><small>With validated holdings files</small></div><div class="overlap-kpi"><span>Unique securities</span><strong>'+stocks.length+'</strong><small>ISIN-matched across selected funds</small></div></div>'+
-Allocation-weighted mix of reported sectors and undisclosed-sector holdings.
+  '<div class="overlap-visuals"><section class="overlap-visual-card"><div class="card-head"><div><div class="card-title">Fund-to-fund overlap heatmap</div><div class="card-sub">Compare the shared listed-equity exposure across every selected fund pair.</div></div><span class="tag">PAIRWISE</span></div>'+overlapHeatmapMarkup(loaded,pairs)+'</section><section class="overlap-visual-card"><div class="card-head"><div><div class="card-title">Combined exposure by sector</div><div class="card-sub">Allocation-weighted mix of reported sectors and undisclosed-sector holdings.</div></div><span class="tag">DONUT</span></div>'+sectorDonutMarkup(sectors)+'</section></div>'+
   '<div class="overlap-two"><div><div class="card" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Pairwise portfolio overlap</div><div class="card-sub">Sum of the lower of the two schemes’ NAV weights for each matching ISIN.</div></div></div><div class="table-scroll"><table class="overlap-table"><thead><tr><th>Scheme pair</th><th>Overlap</th><th>Shared securities</th></tr></thead><tbody>'+pairRows+'</tbody></table></div></div>'+
   '<div class="card section-gap" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Common securities behind the overlap</div><div class="card-sub">Top 20 shared positions by overlap contribution. Each weight is a percentage of the respective scheme NAV.</div></div></div><div class="table-scroll"><table class="overlap-table"><thead><tr><th>Scheme pair</th><th>Security / ISIN</th><th>Weight A</th><th>Weight B</th><th>Contribution</th></tr></thead><tbody>'+(commonRows||'<tr><td colspan="5">No common ISINs were found for the selected schemes.</td></tr>')+'</tbody></table></div></div>'+
   '<div class="card section-gap" style="box-shadow:none"><div class="card-head"><div><div class="card-title">Sector exposure</div><div class="card-sub">Weighted contribution to selected-fund portfolio NAV.</div></div></div><div class="table-scroll"><table><thead><tr><th>Sector</th><th>Exposure</th></tr></thead><tbody>'+sectorRows+'</tbody></table></div></div></div>'+
