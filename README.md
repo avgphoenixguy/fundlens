@@ -20,7 +20,7 @@ A plain-language experience that explains:
 ### Advanced
 A methodology-first workspace that exposes:
 - NAV-derived trailing returns, annualised volatility and maximum drawdown.
-- Sharpe and Sortino ratios using an explicit user-entered annual risk-free / target-rate assumption.
+- Sharpe and Sortino ratios using an automatically retrieved RBI 10-year G-Sec yield proxy, with its security and observation date displayed.
 - Alpha, Beta, Information Ratio, tracking error and benchmark-relative CAGR when an appropriate mapped benchmark TRI is retrieved automatically and matched by date.
 - A configurable analysis period, benchmark selection and metric explanations.
 - Category-aware interpretation for active equity, index/passive, debt and hybrid schemes. Category detection is a research aid and should be verified against the scheme's latest SID / factsheet.
@@ -51,7 +51,7 @@ A small set of selected-scheme AUM, cost, riskometer, benchmark and AMC-reported
 
 - **CAGR:** NAV / TRI growth over actual elapsed calendar time.
 - **Volatility:** sample standard deviation of daily NAV returns multiplied by √252.
-- **Sharpe:** mean daily excess return over the user-entered risk-free assumption, divided by daily return standard deviation, multiplied by √252.
+- **Sharpe:** mean daily excess return over the RBI 10-year G-Sec proxy, divided by daily return standard deviation, multiplied by √252.
 - **Sortino:** mean daily excess return divided by downside deviation relative to the same target-rate assumption, multiplied by √252.
 - **Beta:** sample covariance of fund and benchmark daily returns divided by benchmark return variance.
 - **Alpha:** annualised daily CAPM intercept using matched fund / benchmark returns and the selected risk-free assumption.
