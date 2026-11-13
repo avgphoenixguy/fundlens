@@ -288,11 +288,17 @@ function parsePortfolio(buf) {
   const deduped = new Map();
   for (const h of holdings) {
     const old = deduped.get(h.key);
-    if (!old || h.weightPct > old.weightPct) deduped.set(h.key, h);
+    if (!old) deduped.set(h.key, { ...h });
+    else {
+      old.weightPct += h.weightPct;
+      if (old.sector === "Sector not disclosed" && h.sector !== "Sector not disclosed") old.sector = h.sector;
+    }
   }
   const out = [...deduped.values()].sort((a, b) => b.weightPct - a.weightPct);
-  if (!out.length) throw new Error("No equity holdings with validated weights were found in the workbook");
+  if (!out.length) throw new Error("No listed-equity holdings with validated ISINs and weights were found in the workbook. Debt-only schemes are not eligible for stock overlap.");
+  if (out.some(h => h.weightPct > 100)) throw new Error("A security's aggregated weight exceeded 100% of scheme NAV. Workbook was rejected.");
   const equityCoveragePct = out.reduce((s, h) => s + h.weightPct, 0);
+  if (!Number.isFinite(equityCoveragePct) || equityCoveragePct > 105) throw new Error("Parsed listed-equity weights exceed 105% of scheme NAV. Workbook was rejected for review.");
   return { holdings: out, equityCoveragePct, excludedRows: excluded, totalEquityHoldings: out.length };
 }
 async function getSchemeMeta(code) {
