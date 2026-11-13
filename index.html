@@ -484,6 +484,26 @@ function parseOverlapCSV(text){
   if(old){old.weight+=weight;if(old.sector==='Unclassified'&&sector!=='Unclassified')old.sector=sector}
   else g.holdings.set(key,{key,isin,security,sector,weight});
  });
+ // If an issuer name is identical across the uploaded schemes, propagate a known ISIN to
+ // rows where that same normalised name omitted it. Conflicting names / ISINs are not guessed.
+ const nameToIsin=new Map(),ambiguousNames=new Set();
+ grouped.forEach(g=>g.holdings.forEach(h=>{
+  if(!h.isin)return;
+  const n=overlapNorm(h.security),existing=nameToIsin.get(n);
+  if(existing&&existing!==h.isin)ambiguousNames.add(n);else nameToIsin.set(n,h.isin);
+ }));
+ ambiguousNames.forEach(n=>nameToIsin.delete(n));
+ grouped.forEach(g=>{
+  const remapped=new Map();
+  g.holdings.forEach(h=>{
+   const mapped=h.isin||nameToIsin.get(overlapNorm(h.security))||'';
+   const key=mapped?'ISIN:'+mapped:'NAME:'+overlapNorm(h.security);
+   const prior=remapped.get(key);
+   if(prior){prior.weight+=h.weight;if(prior.sector==='Unclassified'&&h.sector!=='Unclassified')prior.sector=h.sector}
+   else remapped.set(key,{...h,key,isin:mapped});
+  });
+  g.holdings=remapped;
+ });
  const schemes=[...grouped.values()].filter(x=>x.holdings.size);
  if(schemes.length<2)throw new Error('Only '+schemes.length+' valid scheme was found. Include at least two different scheme names or scheme codes.');
  schemes.forEach(g=>{
