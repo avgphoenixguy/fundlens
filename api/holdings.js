@@ -368,6 +368,12 @@ async function resolvePortfolio(scheme) {
   const buf = await fetchBinary(fileUrl, source.page, source.allowedHosts);
   if (buf.readUInt32LE(0) !== 0x04034b50) throw new Error("The AMC file is not an XLSX workbook; it was not parsed or approximated");
   const asOf = chosen.asOf || parseDisclosureDate(fileUrl);
+  if (!asOf || !Number.isFinite(new Date(asOf + "T00:00:00Z").getTime())) {
+    throw Object.assign(new Error("The AMC workbook has no verifiable portfolio reporting date. Overlap is withheld."), { status: 422, sourceUrl: fileUrl });
+  }
+  if (new Date(asOf + "T00:00:00Z").getTime() > Date.now() + 86400000) {
+    throw Object.assign(new Error("The AMC workbook reporting date is in the future. Overlap is withheld."), { status: 422, sourceUrl: fileUrl });
+  }
   const parsed = parsePortfolio(buf, source === AMC_SOURCES.ppfas);
   const ageDays = asOf ? Math.floor((Date.now() - new Date(asOf + "T00:00:00Z").getTime()) / 86400000) : null;
   return {
