@@ -1,61 +1,74 @@
 # FundLens automatic data and assumptions guide
 
-FundLens does not ask users to upload benchmark TRI files. Research inputs are fetched automatically wherever a supported public source and verified scheme mapping are available.
+FundLens has no user-facing upload controls. The application requests scheme and disclosure inputs automatically from public sources wherever the source supports the requested field.
 
 ## 1. Scheme NAV
 
-- Source: MFapi.in scheme search and NAV history endpoints, which republish AMFI NAV data.
+- Source: MFapi.in scheme search and scheme history endpoints, which republish AMFI NAV disclosures.
 - Trigger: when a scheme is selected or loaded.
 - Use: trailing returns, rolling returns, volatility and drawdown.
-- Caveat: NAV source freshness depends on MFapi.in; NAV is not benchmark TRI and does not supply TER, AUM, holdings or factsheet risk ratios.
+- Caveat: NAV freshness depends on MFapi.in. NAV is not benchmark TRI and does not supply all scheme disclosures.
 
-## 2. Benchmark TRI
+## 2. AMFI Fund Performance API
 
-- Source: NSE Indices Historical Data Reports, Total Returns Index Values.
-- Retrieval: FundLens calls its cached /api/benchmark Vercel function for supported Nifty index names.
-- Supported automatic Nifty benchmarks: NIFTY 50, NIFTY 100, NIFTY 500, NIFTY NEXT 50, NIFTY MIDCAP 150 and NIFTY SMALLCAP 250.
-- Mapping: the app uses stored benchmark mappings for the six curated scheme examples. A current scheme benchmark must be confirmed from its latest SID / factsheet. MFapi scheme metadata does not contain a universal benchmark field.
-- Date matching: exact scheme NAV and TRI dates only. No forward fill, interpolation or price-index substitution.
-- Cache: benchmark API response is cached at Vercel edge for six hours, with stale-while-revalidate up to one day.
-- Unsupported cases: CRISIL benchmarks, other non-Nifty benchmarks, and schemes without a verified stored Tier 1 mapping do not receive fabricated Nifty substitutes. Sharpe / Sortino remain available; Alpha / Beta / IR / tracking error and benchmark-relative rolling outputs are shown as unavailable.
-- Integration caveat: the NSE Indices historical-data page exposes downloadable TRI values. The current connector uses the same site's underlying historical-data endpoint, which is not published as a documented public commercial API. It may change or be rate-limited. For production, use an approved index data subscription or official API / data agreement.
+- Endpoint family: AMFI Fund Performance API, accessed via the public AMFI Fund Performance page.
+- Trigger: on selected-scheme load.
+- Lookup: scheme name, scheme category and Direct / Regular plan are used to find the scheme record. The server checks recent AMFI report dates and relevant subcategory records.
+- Fields used: AMFI benchmark name, AUM, Riskometer, official Information Ratio for 1Y / 3Y / 5Y / 10Y by plan, and AMFI trailing fund / benchmark performance for those periods.
+- Source date: the AMFI report date returned by the API is displayed.
+- Match rule: exact normalized scheme-name match preferred; fuzzy matching only above a strict similarity threshold. When no sufficiently close match is found, the app leaves the field unavailable rather than guessing.
+- Interpretation: AMFI-reported IR values are official data disclosures. They are shown separately from a FundLens-calculated ratio and are selected by the chosen plan and selected period.
 
-## 3. Risk-free assumption
+## 3. AMFI Total Expense Ratio workbook
+
+- Endpoint: AMFI monthly TER workbook at https://www.amfiindia.com/api/populate-te-rdata-revised.
+- Trigger: on selected-scheme load.
+- Retrieval: current month workbook first; preceding month is attempted if the current month's workbook is unavailable.
+- Fields: scheme name, NSDL scheme code, TER date, Direct Plan - Total TER (%) and Regular Plan - Total TER (%).
+- Matching: scheme name is normalized and matched to the selected scheme. If no match is found, no automatic TER is returned. The app does not silently reuse a different scheme's value.
+- Output: full plan-specific TER and TER date. This must not be confused with a Base Expense Ratio (BER).
+
+## 4. RBI risk-free proxy
 
 - Source: Reserve Bank of India Current Rates, Government Securities Market.
-- Selected proxy: yield on a long-dated Government of India security with maturity closest to 10 years.
-- Example observation: RBI's page on 12 November 2026 displayed 7.2178% for 6.94% GS 2036, with the yield dated 11 November 2026.
-- Retrieval: cached /api/risk-free-rate route attempts to fetch the RBI page on request. It displays the security, yield, source and date in Advanced view.
-- Fallback: if the RBI page is unavailable or its structure changes, FundLens shows 7.2178% from 11 November 2026 and clearly labels the fallback.
-- Calculation assumption: the latest annual yield is divided by 252 to derive a daily proxy and held constant over the selected historical NAV window. It is not a daily historical risk-free curve or a maturity-matched short-term rate.
-- Usage: used in Sharpe and Alpha as the excess-return rate, and as the downside target in Sortino.
-- Interpretation: the 10-year yield is a long-duration sovereign opportunity-cost proxy. For debt funds, a duration-matched short-term sovereign / T-bill series may be more appropriate. The prototype uses the requested 10-year proxy consistently and exposes the assumption.
+- Proxy: yield on 6.94% GS 2036, the long-dated Government of India security closest to 10 years to maturity in the current RBI table.
+- Current verified observation: 7.2430% with yield date 12 November 2026, as returned by the RBI page fetched on 13 November 2026.
+- Fallback: if the live RBI page is unavailable or the table structure changes, the app returns 7.2178% dated 11 November 2026 and visibly labels it as a fallback snapshot.
+- Calculation: annual yield / 252 is used as the daily risk-free proxy and held constant across the selected historical NAV sample. It is not a daily historical risk-free curve.
+- Usage: Sharpe and Alpha use it as the excess-return rate. Sortino uses the same rate as the downside target.
+- Caveat: a long-dated G-Sec yield is an opportunity-cost proxy, not a universally correct risk-free rate for every period or category. A duration-matched short-term sovereign rate could be better for some debt funds.
 
-## 4. Calculated metrics
+## 5. Benchmark TRI
 
-| Metric | Required inputs | Current behaviour |
+- Scheme mapping: current AMFI benchmark name is retrieved automatically when available.
+- Intended history source: NSE Indices Historical Data Reports, Total Returns Index Values.
+- Implementation: FundLens requests daily TRI through a cached Vercel /api/benchmark route for supported Nifty benchmark names.
+- Current limitation: NSE historical-data requests return HTML challenge responses from the Vercel serverless environment. Consequently, Alpha, Beta, FundLens-calculated IR, tracking error, benchmark CAGR and benchmark-relative rolling outcomes are suppressed when no matched daily TRI is received.
+- No price-index substitution is used. AMFI-reported trailing benchmark performance and official IR remain available from the AMFI Fund Performance API even when daily TRI history is not.
+
+## 6. Metric availability
+
+| Metric | Automatic inputs | Current status |
 |---|---|---|
-| Sharpe | Scheme NAV and RBI G-Sec proxy | Automatic |
-| Sortino | Scheme NAV and same RBI proxy as minimum acceptable return | Automatic |
-| Volatility | Scheme NAV | Automatic |
-| Maximum drawdown | Scheme NAV | Automatic |
-| Alpha | Scheme NAV, matched benchmark TRI and RBI proxy | Automatic only for mapped schemes with supported Nifty TRI |
-| Beta | Scheme NAV and matched benchmark TRI | Automatic only for mapped schemes with supported Nifty TRI |
-| Information Ratio | Scheme NAV and matched Tier 1 benchmark TRI | Automatic annualised research estimate for supported Nifty TRI; not official AMC / AMFI IR |
-| Tracking error | Scheme NAV and matched benchmark TRI | Automatic for supported mapped benchmark |
-| Benchmark-relative rolling returns | Scheme NAV and matched TRI history | Automatic for supported mapped benchmark |
-
-## 5. What remains static / unavailable
-
-- Curated AUM, BER / TER, riskometer, manager and debt-disclosure examples are dated reference values, not refreshed from the NAV API.
-- There is no automatic AMC-wide mapping for every mutual fund scheme.
-- CRISIL daily benchmark integrations are not connected.
-- No uploads are required or provided in the current UI. Unsupported inputs are suppressed rather than guessed.
+| NAV trailing returns / rolling returns | MFapi.in NAV | Automatic |
+| Volatility / drawdown | MFapi.in NAV | Automatic |
+| Sharpe | NAV + RBI long-dated G-Sec proxy | Automatic |
+| Sortino | NAV + same RBI proxy as downside target | Automatic |
+| Official AMFI IR | AMFI Fund Performance API, selected plan and report period | Automatic when scheme match / value is available |
+| AMFI trailing fund / benchmark returns | AMFI Fund Performance API | Automatic when report value is available |
+| AUM / Riskometer / benchmark name | AMFI Fund Performance API | Automatic when scheme match is available |
+| Direct / Regular TER | AMFI monthly TER workbook | Automatic when scheme match is available |
+| Alpha / Beta | NAV + matched daily benchmark TRI + RBI proxy for Alpha | Not available while NSE TRI requests are blocked |
+| Calculated IR / tracking error | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
+| Benchmark-relative rolling outcomes | NAV + matched daily benchmark TRI | Not available while NSE TRI requests are blocked |
+| YTM / modified duration / credit quality / holdings | AMC / scheme portfolio disclosures | Not automatically integrated yet |
 
 ## Sources
 
 - MFapi.in documentation: https://www.mfapi.in/docs/
+- AMFI Fund Performance page: https://www.amfiindia.com/polling/amfi/fund-performance
+- AMFI monthly TER workbook endpoint: https://www.amfiindia.com/api/populate-te-rdata-revised
+- AMFI Total TER disclosure page: https://www.amfiindia.com/ter
 - NSE Indices historical data reports: https://www.niftyindices.com/reports/historical-data
-- NSE Total Return Index concept: https://www.nseindia.com/static/products-services/indices-total-returns-index
-- RBI Current Rates: https://www.rbi.org.in/
+- RBI Current Rates: https://www.rbi.org.in/?id=10395
 - SEBI Information Ratio circular, 17 January 2025: https://www.sebi.gov.in/legal/circulars/jan-2025/disclosure-of-risk-adjusted-return-information-ratio-ir-for-mutual-fund-schemes-_90928.html
