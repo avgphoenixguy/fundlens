@@ -28,7 +28,7 @@ The user should download current AMC / AMFI portfolio disclosures, use the FundL
 - When a holding has an ISIN, the upload key is `ISIN:<value>`.
 - If ISIN is missing, the upload key is `NAME:<normalised security name>`.
 - Rows with the same key in the same scheme are aggregated.
-- ISIN is the preferred matching key. If one scheme row has an ISIN and another scheme row for the same company omits it, the current implementation will not automatically reconcile the two different identifiers. Consistent ISIN coverage is important.
+- ISIN is the preferred matching key. If one scheme row has an ISIN and another omits it, the importer propagates the known ISIN only when the normalised security name matches exactly across the upload and there is no conflicting ISIN for that name. Consistent ISIN coverage is still strongly preferred.
 - Similar or differently formatted names can lead to missed or false matches when ISIN is absent.
 
 ## Pairwise fund overlap
@@ -71,7 +71,7 @@ Investors should interpret this alongside category, market capitalisation, geogr
 ## Regulatory / source context
 
 SEBI's mutual fund disclosure framework requires monthly portfolio disclosure, including ISIN, in downloadable spreadsheet format. Refer to the current SEBI Master Circular for Mutual Funds and the latest AMC / AMFI portfolio files:
-- [SEBI Master Circular for Mutual Funds, 20 March 2026](https://www.sebi.gov.in/legal/master-circulars/mar-2026/master-circular-for-mutual-funds_100707.html)
+- [SEBI Master Circular for Mutual Funds, 20 March 2026](https://www.sebi.gov.in/legal/master-circulars/mar-2026/master-circular-for-mutual-funds_100491.html)
 - [SEBI circular on monthly portfolio disclosure / related portfolio disclosures](https://www.sebi.gov.in/legal/circulars/apr-2021/circular-on-relevant-portfolio-disclosure-and-risk-o-meter-disclosure_49912.html)
 
 FundLens is a research prototype, not investment advice.
