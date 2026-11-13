@@ -257,17 +257,17 @@ body.studio-open .app-shell{display:block}
     <div class="metric-caption">Sources: <a class="source-link" href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener">NSE Indices historical Total Returns Index values ↗</a> · <a class="source-link" href="https://www.rbi.org.in/" target="_blank" rel="noopener">RBI Current Rates, Government Securities Market ↗</a>. The RBI 10-year G-Sec yield is used as a constant current-rate proxy over the selected NAV sample, not as a daily historical risk-free curve. Scheme benchmark mappings are stored for the curated schemes; unfamiliar schemes are not guessed.</div>
    </div>
    <div class="panel-box advanced-only" id="advancedMetrics">
-    <div class="panel-heading"><div><h3>Risk-adjusted and benchmark-relative scorecard</h3><p>Calculated from NAV and, where imported, matched daily TRI observations.</p></div><span class="tag green">TRANSPARENT METHODOLOGY</span></div>
+    <div class="panel-heading"><div><h3>Risk-adjusted and benchmark-relative scorecard</h3><p>Calculated from NAV and automatically retrieved, exact-date matched benchmark TRI where available.</p></div><span class="tag green">TRANSPARENT METHODOLOGY</span></div>
     <div class="metric-grid">
      <div class="metric-card"><div class="m-label">Sharpe ratio</div><div class="m-value" id="metricSharpe">—</div><div class="m-note">Excess return per unit of total volatility</div></div>
      <div class="metric-card"><div class="m-label">Sortino ratio</div><div class="m-value" id="metricSortino">—</div><div class="m-note">Excess return relative to downside deviation</div></div>
      <div class="metric-card"><div class="m-label">Alpha (annualised)</div><div class="m-value" id="metricAlpha">Unavailable</div><div class="m-note">CAPM intercept using matched benchmark returns</div></div>
      <div class="metric-card"><div class="m-label">Beta</div><div class="m-value" id="metricBeta">Unavailable</div><div class="m-note">Sensitivity to selected benchmark</div></div>
-     <div class="metric-card"><div class="m-label">Information Ratio</div><div class="m-value" id="metricIR">Unavailable</div><div class="m-note">Annualised mean active return / tracking error</div></div>
+     <div class="metric-card"><div class="m-label">Information Ratio</div><div class="m-value" id="metricIR">Unavailable</div><div class="m-note">Official AMFI value when supplied, otherwise a labelled FundLens estimate from matched daily TRI</div></div>
      <div class="metric-card"><div class="m-label">Tracking error</div><div class="m-value" id="metricTE">Unavailable</div><div class="m-note">Annualised standard deviation of daily active returns</div></div>
      <div class="metric-card"><div class="m-label">Benchmark CAGR</div><div class="m-value" id="metricBenchmarkCagr">Unavailable</div><div class="m-note">Matched period, total-return index</div></div>
      <div class="metric-card"><div class="m-label">Excess CAGR</div><div class="m-value" id="metricExcessCagr">Unavailable</div><div class="m-note">Fund CAGR less benchmark CAGR</div></div>
-    </div><div class="metric-caption" id="metricCoverage">Load a matched TRI series to calculate benchmark-relative metrics. Sharpe and Sortino use the configured risk-free-rate assumption.</div>
+    </div><div class="metric-caption" id="metricCoverage">Waiting for automatic matched-date TRI retrieval to calculate benchmark-relative metrics. Sharpe and Sortino use the configured risk-free-rate assumption.</div>
    </div>
    <div class="two-col advanced-only">
     <div class="panel-box"><div class="panel-heading"><div><h3>Category-aware research lens</h3><p>Metrics shown depend on scheme category.</p></div></div><div id="categoryLens"><div class="empty">Load a scheme to identify its category lens.</div></div></div>
