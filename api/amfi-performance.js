@@ -96,7 +96,7 @@ module.exports=async function handler(req,res){
   const ranked=eligible.map(r=>({record:r,score:tokenScore(schemeName,r.schemeName)})).sort((a,b)=>b.score-a.score);
   const match=exact||((ranked[0]?.score||0)>=0.8?ranked[0].record:null);
   if(!match)return res.status(404).json({error:"No sufficiently close AMFI scheme-name match was found. No scheme data was guessed.",searched:schemeName,recordsChecked:eligible.length});
-  const num=v=>{const n=Number(String(v??"").replace(/,/g,""));return Number.isFinite(n)?n:null};
+  const num=v=>{if(v===null||v===undefined||String(v).trim()==="")return null;const n=Number(String(v).replace(/,/g,""));return Number.isFinite(n)?n:null};
   return res.status(200).json({
    source:"AMFI Fund Performance API",
    sourceUrl:"https://www.amfiindia.com/polling/amfi/fund-performance",
