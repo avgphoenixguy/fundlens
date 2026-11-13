@@ -23,13 +23,15 @@ function parseRbi(html) {
   const rows = [...block.matchAll(/(\d+(?:\.\d+)?%\s*GS\s*(20\d{2}))\s*[:|]?\s*(\d+\.\d{2,4})\s*%?/gi)];
   if (!rows.length) throw new Error("No G-Sec yield rows found on RBI page");
   const currentYear = new Date().getUTCFullYear();
-  const chosen = rows.map(m => ({security:m[1].replace(/\s+/g," ").trim(), maturity:Number(m[2]), rate:Number(m[3])}))
-    .sort((a,b) => Math.abs(a.maturity-(currentYear+10))-Math.abs(b.maturity-(currentYear+10)))[0];
+  const chosen = rows.map((m,index) => ({security:m[1].replace(/\s+/g," ").trim(), maturity:Number(m[2]), rate:Number(m[3]), index}))
+    // RBI's responsive / desktop page layouts can contain duplicate tables; prefer the last
+    // occurrence of the closest-maturity security because it is the final visible table snapshot.
+    .sort((a,b) => Math.abs(a.maturity-(currentYear+10))-Math.abs(b.maturity-(currentYear+10)) || b.index-a.index)[0];
   if (!Number.isFinite(chosen.rate) || chosen.rate < 3 || chosen.rate > 15) throw new Error("Parsed RBI G-Sec yield failed sanity checks");
   const dateMatch = block.match(/as on\s+([A-Za-z]+\s+\d{1,2},\s+\d{4})/i);
   const asOf = dateMatch ? new Date(dateMatch[1]).toISOString().slice(0,10) : null;
   if (!asOf) throw new Error("RBI G-Sec observation date not found");
-  return {...chosen,asOf,source:"Reserve Bank of India Current Rates",sourceUrl:"https://www.rbi.org.in/",isFallback:false};
+  return {security:chosen.security,maturity:chosen.maturity,rate:chosen.rate,asOf,source:"Reserve Bank of India Current Rates",sourceUrl:"https://www.rbi.org.in/",isFallback:false};
 }
 module.exports = async function handler(req,res) {
   res.setHeader("Cache-Control","public, s-maxage=3600, stale-while-revalidate=21600");
