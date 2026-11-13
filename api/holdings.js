@@ -15,7 +15,6 @@ const AMC_SOURCES = {
       if (/liquid/.test(s)) return "PPLF";
       if (/tax\s*saver|elss/.test(s)) return "PPTSF";
       if (/conservative\s*hybrid/.test(s)) return "PPCHF";
-      if (/arbitrage/.test(s)) return "PPAF";
       if (/dynamic\s*asset\s*allocation/.test(s)) return "PPDAAF";
       if (/large\s*cap/.test(s)) return "PPLCF";
       return null;
@@ -331,9 +330,10 @@ async function getSchemeMeta(code) {
   if (!name || !fundHouse) throw new Error("Scheme metadata did not identify a scheme and AMC");
   return { name, fundHouse, category: String(meta.scheme_category || "") };
 }
-async function resolvePortfolio(scheme, debug = false) {
+async function resolvePortfolio(scheme) {
   const source = Object.values(AMC_SOURCES).find(x => x.match.test(scheme.fundHouse));
   if (!source) throw Object.assign(new Error("Automatic public holdings retrieval is not yet supported for " + scheme.fundHouse + ". No substitute or estimated holdings were used."), { status: 422, fundHouse: scheme.fundHouse });
+  if (/arbitrage|equity savings/i.test(scheme.name)) throw Object.assign(new Error("This scheme uses arbitrage or hedged equity strategies. Gross stock holdings do not equal net market exposure, so FundLens withholds the overlap calculation."), { status: 422, fundHouse: scheme.fundHouse });
   const html = await fetchText(source.page, source.page);
   const links = collectDownloads(html, source.page, source.allowedHosts);
   let chosen = null;
@@ -346,11 +346,6 @@ async function resolvePortfolio(scheme, debug = false) {
   }
   if (!chosen) throw Object.assign(new Error("No matching public monthly portfolio workbook was found for this scheme on the AMC disclosure page."), { status: 404, sourceUrl: source.page });
   const fileUrl = chosen.url;
-  if (debug && source === AMC_SOURCES.hdfc) {
-    const debugBytes = await fetchBinary(fileUrl, source.page);
-    const debugRows = parseXlsxRows(debugBytes);
-    return { debug: true, schemeName: scheme.name, fundHouse: scheme.fundHouse, linkCount: links.length, selected: chosen, fileBytes: debugBytes.length, previewRows: debugRows.slice(0, 35).map(row => row.map(cell => cell ? cell.value : "").slice(0, 15)) };
-  }
   const fileHost = new URL(fileUrl).hostname.toLowerCase();
   if (!source.allowedHosts.includes(fileHost)) throw new Error("The discovered workbook host is not in the AMC allowlist");
   const buf = await fetchBinary(fileUrl, source.page);
@@ -386,7 +381,7 @@ module.exports = async function handler(req, res) {
   if (!Number.isSafeInteger(code) || code <= 0) return res.status(400).json({ error: "A valid MFAPI schemeCode is required." });
   try {
     const scheme = await getSchemeMeta(code);
-    const result = await resolvePortfolio({ ...scheme, schemeCode: code }, req.query.debug === "1");
+    const result = await resolvePortfolio({ ...scheme, schemeCode: code });
     return res.status(200).json(result);
   } catch (error) {
     const status = Number(error.status) || 502;
