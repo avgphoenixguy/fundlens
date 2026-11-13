@@ -370,7 +370,7 @@ body.studio-open .app-shell{display:block}
      </div>
     </div>
     <div class="note-box"><b>Methodology.</b> For every eligible NAV date, the engine finds the first available NAV on or after the date shifted by the selected number of calendar months. It computes the holding-period return as end NAV ÷ start NAV − 1. CAGR mode annualises that return over the selected calendar window. Daily, weekly and monthly frequencies change the spacing of start dates, not the return endpoints. Overlapping windows are not independent observations.</div>
-    <div class="warning-box"><b>Benchmark data limitation.</b> FundLens attempts to retrieve the mapped benchmark TRI automatically. The current NSE TRI connection may return an unavailable response. When that happens, rolling benchmark comparisons are withheld. No manual upload is required or supported, and a price index is never substituted.</div>
+    <div class="warning-box"><b>Benchmark data limitation.</b> FundLens requests a published weekly TRI-derived series for supported Nifty benchmarks. Benchmark-relative rolling outcomes require validated weekly observations and exact-date NAV matches. Until that data is available, the comparison is withheld. No manual upload is required or supported, and a price-return series is never substituted.</div>
 
    <div class="panel-box advanced-only" id="relativeRolling">
     <div class="panel-heading"><div><h3>Benchmark-relative rolling outcomes</h3><p>For each common start date, compare the scheme's holding-period CAGR with the matched benchmark TRI CAGR.</p></div><span class="tag amber">SAME-DATE TRI REQUIRED</span></div>
