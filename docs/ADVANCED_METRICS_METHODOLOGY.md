@@ -1,51 +1,120 @@
 # FundLens advanced metrics methodology
 
-## Data inputs and matching
+## 1. Inputs and matching
 
-Historical scheme NAV data is requested from MFapi.in, which republishes AMFI scheme NAV observations. Benchmark-relative metrics require a separate daily Total Return Index (TRI) series for the exact benchmark named in the scheme's current Scheme Information Document (SID) or factsheet.
+### Scheme returns
+FundLens fetches scheme NAV observations through MFapi.in. Daily simple return is calculated as:
 
-The Advanced view accepts a user-supplied CSV with a date column and a Total Returns Index value column. Fund and benchmark observations are joined on exact dates. No forward-fill, price-index substitution or synthetic benchmark observations are used. At least 30 matched daily returns are required before benchmark-relative metrics are displayed. A materially longer history is recommended for interpretation.
+`r_f,t = NAV_t / NAV_(t-1) - 1`
 
-NSE Indices provides historical index data and a separate [Total Returns Index Values report](https://niftyindices.com/reports/historical-data). Its [TRI explainer](https://www.niftyindices.com/resources/index-concepts/total-return-index) explains that TRI includes constituent dividends. NSE explains that TRI includes constituent dividend receipts, whereas a price index does not. Mutual-fund performance should therefore be compared with the relevant TRI, not its price index.
+The history belongs to the scheme code / plan / option returned by the scheme directory. Confirm the exact Direct / Regular plan and Growth / IDCW option in the scheme name and current scheme documents. IDCW distributions are not reinvested by a plain NAV-only Growth-style calculation; use a compatible total-return series if analysing distributed options.
 
-## Calculations
+### Benchmark returns
+Benchmark-relative measures require a daily Total Returns Index series for the exact benchmark identified in the latest SID / factsheet. The benchmark selector and imported file must refer to the same index. FundLens parses a date column and a TRI value column, sorts observations and removes duplicate dates. It then joins fund NAV and TRI on exact dates only. It does not forward-fill, interpolate, or substitute a price-index close.
 
-Let r_p,t be the scheme's daily NAV return and r_b,t the benchmark's daily TRI return. Annualisation uses 252 trading observations. The user-supplied risk-free rate is converted to a daily assumption by dividing the annual rate by 252.
+A minimum of 30 matched return observations is a software display threshold, not a claim that 30 days is enough for robust inference. Multi-year, like-for-like periods are preferable. Both scheme and benchmark must be observed on the same dates.
 
-- Annualised volatility: sample standard deviation of daily scheme returns multiplied by square root of 252.
-- Sharpe ratio: mean daily scheme return less daily risk-free assumption, divided by daily standard deviation, multiplied by square root of 252.
-- Sortino ratio: mean daily scheme return less the same target rate, divided by the square root of the mean squared negative target-relative daily returns, multiplied by square root of 252.
-- Beta: sample covariance of scheme and benchmark daily returns divided by benchmark return variance.
-- Alpha: annualised daily CAPM intercept, 252 × [mean scheme return - risk-free rate - beta × (mean benchmark return - risk-free rate)].
-- Tracking error: sample standard deviation of daily active returns multiplied by square root of 252.
-- Information Ratio (equity-oriented schemes only): mean daily arithmetic active return divided by the standard deviation of daily arithmetic excess returns, using the scheme's Tier 1 benchmark. The SEBI circular does not specify a square-root-of-252 multiplier in this formula, so FundLens does not annualise this daily IR estimate.
-- Benchmark CAGR and excess CAGR use the same matched first and last dates.
+NSE Indices provides historical Total Returns Index Values reports. TRI includes constituent dividends reinvested into the index and is the correct index concept for comparison with total fund returns. See:
+- [NSE Indices historical data reports](https://www.niftyindices.com/reports/historical-data)
+- [NSE Total Returns Index explanation](https://www.nseindia.com/static/products-services/indices-total-returns-index)
 
-The risk-free assumption is visible in the interface and editable. A zero value means a zero-return target, not a claim about the prevailing Indian risk-free rate. Set the risk-free proxy and observation period before interpreting Sharpe, Sortino or Alpha.
+For non-Nifty benchmarks, use the official index provider and verify the benchmark named in the latest scheme SID / factsheet.
 
-## Rolling return methodology
+## 2. Period and daily assumptions
 
-For every eligible NAV date, the engine finds the first available NAV observation on or after the date shifted by the selected number of calendar months. It computes either absolute return or annualised CAGR using actual elapsed calendar time. Daily, weekly and monthly frequencies change the spacing of start dates. Overlapping windows are not independent observations.
+The Advanced workspace lets the user choose an analysis period (1Y, 3Y, 5Y, 10Y or maximum available) and an annual risk-free-rate assumption. The selected analysis period is anchored to the latest available date in the NAV series. If the scheme does not have enough observations to cover the selected period, period-dependent metrics are suppressed.
 
-When a benchmark TRI is loaded, the engine calculates fund and benchmark CAGR over matched start and end dates for each rolling window. It reports the proportion of matched windows in which the fund CAGR exceeded benchmark CAGR, plus median excess CAGR.
+The current prototype converts the annual risk-free assumption to a simple daily approximation by dividing by 252. It uses 252 trading observations for annualisation. This is a transparent modelling convention, not a live risk-free market feed. Change the assumption and check the sample period before interpreting the ratios.
 
-## Category-aware interpretation
+## 3. Metrics
 
-- Active equity: rolling-return outcomes, benchmark-relative returns, Sharpe, Sortino, Alpha, Beta, Information Ratio, tracking error, drawdown and expenses.
-- Index / passive: tracking difference, tracking error, Direct-plan TER, AUM, replication and portfolio exposures.
-- Debt: credit quality, YTM, modified duration, maturity profile, liquidity, expenses and concentration. Equity Alpha / Beta are not substitutes for credit analysis.
-- Hybrid: equity / debt allocation, sleeve-level risk, duration, credit exposure and rebalancing behaviour.
+Let:
+- `r_f,t` = daily arithmetic scheme NAV return
+- `r_b,t` = daily arithmetic benchmark TRI return
+- `r_0` = annual user-entered risk-free rate divided by 252
+- `N = 252` = annualisation convention
 
-The app does not calculate one universal fund score. A high Sharpe ratio for an equity fund does not answer whether a liquid fund has appropriate credit exposure.
+### Annualised volatility
+Sample standard deviation of daily scheme returns × `√252`.
 
-## AMC-reported values versus prototype estimates
+### Sharpe ratio
+`mean(r_f,t - r_0) / sample_sd(r_f,t) × √252`.
 
-The Scheme Disclosures panel contains dated factsheet snapshots for selected schemes. It keeps AMC-reported ratios and dated AUM / cost disclosures separate from figures calculated by the app. BER is not relabelled as TER. Plan and option mismatches are explicitly called out.
+This is a NAV-derived estimate based on the visible risk-free assumption. It is not necessarily the same as an AMC factsheet Sharpe, which may use another period, frequency or risk-free proxy.
 
-The Information Ratio calculated from an imported matched series is an analytical estimate. It is not labelled as the AMC's regulatory disclosure. Where a daily AMC-reported IR is available, users should consult the AMC's statutory disclosure and use the AMC figure with its reported date and source.
+### Sortino ratio
+`mean(r_f,t - r_0) / downside_deviation × √252`, where downside deviation is the root mean square of the negative daily deviations below the selected target rate. In the current UI, the same annual rate input is used as the risk-free / downside target assumption. It should not be interpreted as a universal target return.
 
-## Limitations and production requirements
+### Beta
+For exact-date-matched daily fund and benchmark returns:
 
-The current prototype does not automatically identify the authoritative Tier 1 benchmark for every searched scheme. Confirm the benchmark from the latest SID / factsheet before importing its TRI. TRI and holdings CSV uploads are processed in browser memory for the current session only. Curated AUM, TER and AMC risk snapshots are dated and not refreshed by the NAV API.
+`Cov_sample(r_f, r_b) / Var_sample(r_b)`.
 
-A production implementation should connect approved / licensed benchmark and disclosure feeds; map schemes to authoritative benchmarks; version source snapshots; validate scheme plan and option; monitor stale or missing data; and preserve source lineage. The prototype is research support, not investment advice.
+### Alpha
+Annualised daily CAPM intercept:
+
+`252 × [mean(r_f) - r_0 - Beta × (mean(r_b) - r_0)]`.
+
+Alpha is an estimate that is sensitive to benchmark choice, sample period and assumptions. It is not a guarantee of manager skill.
+
+### Tracking error
+Sample standard deviation of daily active return `(r_f - r_b)` × `√252`.
+
+### Information Ratio
+For equity-oriented schemes, FundLens' estimate is:
+
+`mean(daily arithmetic active return) / sample_sd(daily arithmetic active return)`.
+
+The implementation does **not** multiply this daily estimate by `√252`. SEBI Circular SEBI/HO/IMD/IMD-PoD-2/P/CIR/2025/6 (17 January 2025) defines IR using portfolio return less benchmark return divided by standard deviation of excess return, specifies the scheme's Tier 1 benchmark, and specifies daily return values / arithmetic daily portfolio returns. The AMC / AMFI's official disclosed IR should be used for regulatory comparison; the FundLens estimate is explicitly a research calculation and can differ because of date, source and implementation choices.
+
+Sources:
+- [SEBI circular, 17 January 2025](https://www.sebi.gov.in/legal/circulars/jan-2025/disclosure-of-risk-adjusted-return-information-ratio-ir-for-mutual-fund-schemes-_90928.html)
+- [SEBI Master Circular for Mutual Funds, 20 March 2026, section 6.10](https://www.sebi.gov.in/sebi_data/attachdocs/mar-2026/1774024028162.pdf)
+- [AMFI Information Ratio page](https://www.amfiindia.com/otherdata/fund-performance/information-ratio)
+
+### Benchmark CAGR / excess CAGR
+Fund and benchmark CAGR are calculated across the same first and last matched NAV / TRI observations. Excess CAGR is fund CAGR less benchmark CAGR over those dates.
+
+## 4. Benchmark-relative rolling outcomes
+
+For each eligible common start date, FundLens shifts the start date by the selected number of calendar months and locates the next available **matched** date. It calculates fund and benchmark CAGR over the same start / end pair. The interface reports:
+- Share of matched windows in which fund CAGR exceeded benchmark CAGR.
+- Median excess CAGR.
+- Number of matched windows.
+
+Windows overlap and therefore are not independent observations. A percentage of historical windows beating the benchmark is not the probability of outperformance in the future.
+
+## 5. Category-aware interpretation
+
+- **Active equity:** rolling consistency, matched benchmark excess returns, Sharpe, Sortino, Alpha, Beta, Information Ratio, tracking error, drawdown and expenses.
+- **Index / passive:** tracking difference, tracking error, Direct-plan TER, AUM, replication and portfolio exposures.
+- **Debt:** credit quality, YTM, modified duration, maturity profile, liquidity, issuer / instrument concentration and expenses. Equity Alpha / Beta are not substitutes for credit analysis.
+- **Hybrid:** equity / debt allocation, sleeve-level risk, debt duration / credit exposures, rebalancing and drawdown.
+
+Category classification in this prototype is inferred from scheme metadata and scheme-name patterns. It is a navigation aid, not a substitute for the SEBI category, SID or current factsheet. Verify before using category-specific comparisons.
+
+FundLens deliberately does not calculate one universal scheme score. A high equity-fund Sharpe ratio does not answer whether a debt fund has acceptable credit quality or whether an index fund is tracking its benchmark efficiently.
+
+## 6. AMC-reported disclosures versus FundLens calculations
+
+The six-scheme reference register contains dated snapshots of scheme AUM, cost, riskometer, benchmark, selected returns and AMC-reported ratios. Those values are not fetched from the NAV API and may have different observation dates. The display retains each source date and preserves the distinction between:
+- **TER**: total expense ratio, where the source explicitly reports TER.
+- **BER**: base expense ratio, where the source reports only BER. BER is not relabelled as full TER.
+- **AMC-reported ratio**: a figure published by the AMC for its own stated period / methodology.
+- **FundLens estimate**: a value calculated from the NAV and TRI observations currently loaded.
+
+The UTI sample register, for example, warns that reported return data is Regular Plan Growth while the NAV and cost examples are Direct Plan Growth. Do not treat that as a like-for-like combination.
+
+## 7. Limitations and production requirements
+
+The prototype does not automatically discover authoritative Tier 1 benchmarks for every searched scheme. The investor must confirm the current benchmark and import matching TRI data. It does not have a production data licence, benchmark API key or AMC disclosure integration. Files imported into the static web app remain in browser memory for that session.
+
+A production build should:
+1. Connect approved benchmark and disclosure feeds with usage rights.
+2. Maintain scheme-code / plan / option and benchmark mappings with effective dates.
+3. Validate TRI data type, index name, base history, duplicate dates and missing observations.
+4. Record source URL, download date, disclosure date, observation window, formula version and data hash for each calculation.
+5. Use authoritative AMC / AMFI reported IR values for regulatory display, with the FundLens estimate labelled separately.
+6. Monitor stale data and display warnings when any metric's input snapshot is old or mismatched.
+
+FundLens is research support, not investment advice.
