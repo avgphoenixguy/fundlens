@@ -14,9 +14,9 @@ Benchmark-relative measures require the correct total-return index for the bench
 
 The observed compact series keys include tr (Total Return), pr (Price Return), dd, vol, r3 and r5. FundLens selects only tr and explicitly excludes pr and the other chart statistics. The connector validates weekly observation spacing and returns a rebased growth-of-100 curve, not raw NSE index levels. Tipsheet's published method identifies NSE Indices TRI with dividends reinvested as the underlying source and documents repairs of identified anomalous TRI prints against the corresponding price index. This source-level repair must not be confused with substituting a price-return series.
 
-The scheme's AMFI benchmark mapping determines the requested index. The response is sorted, duplicate dates are removed, and fund NAV / benchmark observations are joined on exact dates only. FundLens does not forward-fill, interpolate or replace a missing TRI observation with a price-index value. CRISIL and schemes without a verified Nifty mapping are not automatically mapped.
+The scheme's AMFI benchmark mapping determines the requested index when AMFI returns a verified scheme record. The connector normalises names, then accepts only exact matches to NIFTY 50, NIFTY 100, NIFTY 500, NIFTY NEXT 50, NIFTY MIDCAP 150 or NIFTY SMALLCAP 250. Similar prefixes with extra strategy or weighting descriptors (for example, NIFTY 50 Equal Weight TRI) are rejected. A curated benchmark fallback for a reference scheme is visibly labelled with its AMC source and date and is not described as AMFI-mapped. The response is sorted, duplicate dates are removed, and fund NAV / benchmark observations are joined on exact dates only. FundLens does not forward-fill, interpolate or replace a missing TRI observation with a price-index value. CRISIL and schemes without a verified Nifty mapping are not automatically mapped.
 
-A minimum of 30 matched weekly return observations is a software display threshold, not a claim that 30 weeks is enough for robust inference. Multi-year, like-for-like periods are preferable. Both scheme and benchmark must be observed on the same dates. The Cloudflare Worker routes `/api/benchmark` to the published-series parser. Benchmark calculations are withheld whenever the route cannot return validated weekly observations or exact-date NAV matches are insufficient.
+Weekly regression uses only consecutive exact-date-matched fund / benchmark observations whose dates are 4–11 calendar days apart. A longer or shorter gap is excluded, rather than annualised as a one-week return. At least 30 usable weekly return observations are required as a software display threshold, not a claim that 30 weeks is enough for robust inference. Multi-year, like-for-like periods are preferable. The Cloudflare Worker routes `/api/benchmark` to the published-series parser. Benchmark calculations are withheld whenever the route cannot return validated weekly observations or exact-date NAV matches are insufficient.
 
 Sources:
 - [Tipsheet public data catalogue](https://tipsheet.markets/data/)
@@ -112,7 +112,7 @@ The six-scheme reference register contains dated AMC snapshots used as fallbacks
 - **AMC-reported ratio**: a figure published by the AMC for its own stated period / methodology.
 - **FundLens estimate**: a value calculated from the NAV and TRI observations currently loaded.
 
-The UTI sample register, for example, warns that reported return data is Regular Plan Growth while the NAV and cost examples are Direct Plan Growth. Do not treat that as a like-for-like combination.
+The comparison workspace allows descriptive comparisons across categories, plans and options. For a like-for-like return conclusion, align scheme plan, option, benchmark and measurement dates. The UTI sample register, for example, warns that reported return data is Regular Plan Growth while the NAV and cost examples are Direct Plan Growth. Do not treat that as a like-for-like combination.
 
 ## 7. Limitations and production requirements
 
